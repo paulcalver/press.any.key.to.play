@@ -8,6 +8,10 @@ let seekForce = 0.05;
 let evadeForceClose = 5.0;
 let evadeForceFar = 3.0;
 
+let inversion = true;
+let concentrationTime = 0;
+let attractionRadius = 200;
+
 // Define your words here - easy to add or remove!
 const WORDS = [
   { text: 'Create', count: 20 },
@@ -19,6 +23,8 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   video = createCapture(VIDEO);
   video.hide();
+
+  fill(255);
   textFont('Space Mono');
 
   // Initialize face detection from faceDetection.js
@@ -33,7 +39,7 @@ function setup() {
       members: [],
       count: wordConfig.count
     };
-    
+
     // Populate this group
     for (let i = 0; i < group.count; i++) {
       group.members.push(new Word(
@@ -42,29 +48,44 @@ function setup() {
         wordConfig.text  // Pass the text to the Word constructor
       ));
     }
-    
+
     groups.push(group);
   }
 
 }
 
 function draw() {
-  background(0);
+
+  if (inversion) {
+    background(0);
+    fill(255);
+  } else {
+    background(255);
+    fill(0);
+  }
 
   // Get current looking state from face detection module
   const isLooking = getIsLooking();
-  // 
+  
   if (isLooking) {
+    concentrationTime += 0.1;
+    attractionRadius += 0.5; // Slowly increase attraction radius
+   
+    // Flicker faster as concentration increases
+    // Start flickering slowly, get faster over time
+    let flickerSpeed = max(2, 240 - concentrationTime); // Divide by smaller number = faster acceleration
+    if (frameCount % flickerSpeed < flickerSpeed / 2) {
+      inversion = false;
+    } else {
+      inversion = true;
+    }
+    
 
-    seekForce += 0.001;
-    evadeForceClose = 5.0;
-    evadeForceFar = 3.0;
 
   } else {
-
-    seekForce = 0.05;
-    evadeForceClose += 1.0;
-    evadeForceFar += 1.0;
+    concentrationTime = 0;
+    attractionRadius = 200; // Reset to default
+    inversion = true;
 
   }
 
@@ -86,7 +107,7 @@ function draw() {
             // Same group
             if (isLooking) {
               // When looking - attract to own kind
-              let attractForce = agent.seek(other.pos);
+              let attractForce = agent.seek(other.pos, attractionRadius);
               attractForce.mult(seekForce);
               agent.applyForce(attractForce);
             } else {
@@ -124,4 +145,18 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+}
+
+function keyPressed() {
+	// FULLSCREEN!!!
+	if (key === 'f' || key === 'F') {
+		let fs = fullscreen();
+		fullscreen(!fs);
+	}
+}
+	
+function windowResized() {
+	if (fullscreen()) {
+	resizeCanvas (windowWidth, windowHeight);
+	}
 }

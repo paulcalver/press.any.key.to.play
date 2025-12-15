@@ -18,10 +18,9 @@ class Word {
     return this.seek(target).mult(-1);
   }
 
-  seek(target) {
+  seek(target, attractionRadius = 200) {
     let force = p5.Vector.sub(target, this.pos);
     let distance = force.mag();
-    let attractionRadius = 200;  // Only attract when within this distance
     
     // If too far away, return zero force (no attraction)
     if (distance > attractionRadius) {
@@ -56,7 +55,7 @@ class Word {
   show() {
     textAlign(CENTER, CENTER);
     textSize(this.textSize);
-    fill(255);
+    //fill(255);
     push();
     translate(this.pos.x, this.pos.y);
     rotate(this.vel.heading());
