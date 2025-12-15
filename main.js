@@ -2,13 +2,50 @@ let video;
 let activeTimer = null; // Current active timer
 let fadingTimers = []; // Array of timers that are fading away
 
+let groups = [];
+
+let seekForce = 0.05;
+let evadeForceClose = 5.0;
+let evadeForceFar = 3.0;
+
+// Define your words here - easy to add or remove!
+const WORDS = [
+  { text: 'Create', count: 20 },
+  { text: 'Play', count: 20 },
+  { text: 'Rest', count: 20 }
+];
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   video = createCapture(VIDEO);
   video.hide();
+  textFont('Space Mono');
 
   // Initialize face detection from faceDetection.js
   initFaceDetection(video);
+
+  let intialGrouping = 0.0;
+
+  // Create groups from WORDS array
+  for (let wordConfig of WORDS) {
+    let group = {
+      name: wordConfig.text.toLowerCase(),
+      members: [],
+      count: wordConfig.count
+    };
+    
+    // Populate this group
+    for (let i = 0; i < group.count; i++) {
+      group.members.push(new Word(
+        random(width * (0 + intialGrouping), width * (1 - intialGrouping)),
+        random(height * (0 + intialGrouping), height * (1 - intialGrouping)),
+        wordConfig.text  // Pass the text to the Word constructor
+      ));
+    }
+    
+    groups.push(group);
+  }
+
 }
 
 function draw() {
@@ -16,57 +53,73 @@ function draw() {
 
   // Get current looking state from face detection module
   const isLooking = getIsLooking();
+  // 
+  if (isLooking) {
 
-  // Start new timer when looking and no active timer exists
-  if (isLooking && !activeTimer) {
-    activeTimer = {
-      score: 0,
-      x: random(width * 0.2, width * 0.8),
-      y: random(height * 0.2, height * 0.8),
-      alpha: 255
-    };
+    seekForce += 0.001;
+    evadeForceClose = 5.0;
+    evadeForceFar = 3.0;
+
+  } else {
+
+    seekForce = 0.05;
+    evadeForceClose += 1.0;
+    evadeForceFar += 1.0;
+
   }
 
-  // Update active timer
-  if (activeTimer) {
-    if (isLooking) {
-      // Increase score while looking
-      activeTimer.score += 50;
-      activeTimer.alpha = 255;
-    } else {
-      // Not looking - move to fading array and clear active
-      fadingTimers.push(activeTimer);
-      activeTimer = null;
+
+  // Update each group
+  for (let currentGroup of groups) {
+    for (let i = 0; i < currentGroup.members.length; i++) {
+      let agent = currentGroup.members[i];
+
+      // Apply forces from all groups
+      for (let otherGroup of groups) {
+        for (let j = 0; j < otherGroup.members.length; j++) {
+          let other = otherGroup.members[j];
+
+          // Skip self
+          if (agent === other) continue;
+
+          if (currentGroup === otherGroup) {
+            // Same group
+            if (isLooking) {
+              // When looking - attract to own kind
+              let attractForce = agent.seek(other.pos);
+              attractForce.mult(seekForce);
+              agent.applyForce(attractForce);
+            } else {
+              // When not looking - repel own kind
+              let repelForce = agent.flee(other.pos);
+              let d = p5.Vector.dist(agent.pos, other.pos);
+              if (d < 150) {
+                repelForce.mult(evadeForceClose);
+              } else {
+                repelForce.mult(evadeForceFar);
+              }
+              agent.applyForce(repelForce);
+            }
+          } else {
+            // Different group - always flee
+            let evadeForce = agent.flee(other.pos);
+            let d = p5.Vector.dist(agent.pos, other.pos);
+            if (d < 150) {
+              evadeForce.mult(evadeForceClose);
+            } else {
+              evadeForce.mult(evadeForceFar);
+            }
+            agent.applyForce(evadeForce);
+          }
+        }
+      }
+
+      agent.edges();
+      agent.update();
+      agent.show();
     }
   }
 
-  // Update all fading timers
-  for (let i = fadingTimers.length - 1; i >= 0; i--) {
-    fadingTimers[i].alpha -= 0.5; // Fade speed
-    
-    // Remove timer if fully faded
-    if (fadingTimers[i].alpha <= 0) {
-      fadingTimers.splice(i, 1);
-    }
-  }
-
-  // Display active timer
-  if (activeTimer) {
-    textAlign(CENTER, CENTER);
-    textSize(72);
-    fill(255, activeTimer.alpha);
-    noStroke();
-    text(activeTimer.score, activeTimer.x, activeTimer.y);
-  }
-
-  // Display all fading timers
-  for (let timer of fadingTimers) {
-    textAlign(CENTER, CENTER);
-    textSize(72);
-    fill(255, timer.alpha);
-    noStroke();
-    text(timer.score, timer.x, timer.y);
-  }
 }
 
 function windowResized() {
