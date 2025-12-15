@@ -12,6 +12,7 @@ canvas {
 
 .input-intro {
   font-size: 28px;
+  max-width: 800px;
 }
 
 .input-instruction {
@@ -25,7 +26,7 @@ canvas {
 }
 
 .word-list {
-  font-size: 28px;
+  font-size: 14px;
 }
 
 .start-button {
@@ -33,4 +34,21 @@ canvas {
   font-size: 14px;
   font-family: 'Space Mono', monospace;
   cursor: pointer;
+}
+
+.start-message {
+  font-size: 14px;
+  max-width: 800px;
+  line-height: 1.6;
+}
+
+.state-message {
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+  color: white;
+  position: fixed;
+  width: 100%;
+  pointer-events: none;
+  z-index: 1000;
 }

@@ -5,7 +5,7 @@ class Word {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.acc = createVector(0, 0);
-    this.maxSpeed = random(2, 12);  // Random speed between 2 and 8
+    this.maxSpeed = random(1, 5);  // Random speed between 1 and 5
     this.maxForce = 0.4;
     this.r = 20;
     this.textSize = 18;
@@ -16,6 +16,29 @@ class Word {
 
   flee(target) {
     return this.seek(target).mult(-1);
+  }
+
+  arrive(target, attractionRadius = 200) {
+    let force = p5.Vector.sub(target, this.pos);
+    let distance = force.mag();
+    
+    // If too far away, return zero force (no attraction)
+    if (distance > attractionRadius) {
+      return createVector(0, 0);
+    }
+    
+    let desiredSpeed = this.maxSpeed;
+    
+    // Slow down when arriving (within 100 pixels)
+    let slowRadius = 100;
+    if (distance < slowRadius) {
+      desiredSpeed = map(distance, 0, slowRadius, 0, this.maxSpeed);
+    }
+    
+    force.setMag(desiredSpeed);
+    force.sub(this.vel);
+    force.limit(this.maxForce);
+    return force;
   }
 
   seek(target, attractionRadius = 200) {
@@ -55,11 +78,17 @@ class Word {
   show() {
     textAlign(CENTER, CENTER);
     textSize(this.textSize);
-    //fill(255);
     push();
     translate(this.pos.x, this.pos.y);
-    rotate(this.vel.heading());
-    text(this.text, 0, 0);  // Display the stored text
+    
+    // Only rotate if moving fast enough
+    // When words cluster and slow down, they straighten out
+    let speed = this.vel.mag();
+    if (speed > 1) {
+      rotate(this.vel.heading());
+    }
+    
+    text(this.text, 0, 0);
     pop();
   }
 
