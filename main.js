@@ -1,17 +1,13 @@
 let input;
 let asciiTotal = 0;
 let wordAsciiTotals = [];
+let words = [];
+let shapes = [];
+let bgColor = 0;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  flock = new Flock();
-
-  // Add an initial set of boids into the system
-  for (let i = 0; i < 100; i++) {
-    let b = new Boid(width * 0.75, height * 0.5);
-    flock.addBoid(b);
-  }
-
+  
   // Create text input area on the left with no border
   input = createElement('textarea');
   input.position(20, 20);
@@ -26,6 +22,84 @@ function setup() {
   input.input(calculateAsciiTotal);
 }
 
+let lastTextLength = 0;
+
+
+function handleVisualEffects(text, spaceTyped) {
+  let previousLength = shapes.length;
+
+  // Handle word completion effects
+  if (spaceTyped && words.length > 0) {
+    let lastWord = words[words.length - 1].toLowerCase();
+    let lastWordTotal = wordAsciiTotals[wordAsciiTotals.length - 1];
+    console.log('Word completed:', lastWord, 'ASCII:', lastWordTotal);
+
+    // Special word conditions
+    if (lastWord === 'sun' || lastWord === 'sunshine') {
+      let x = random(width * 0.5, width);
+      let y = random(0, height);
+      let sunColor = color(255, 204, 0); // Yellow
+      shapes.push(new Circle(x, y, 100, sunColor));
+      console.log('Sun created!');
+    }
+    // Add more special words here as else if statements
+    // else if (lastWord === 'moon') {
+    //   // Another special word
+    // }
+    else {
+      // Default: change background color
+      bgColor = lastWordTotal % 256;
+      console.log('BG Color:', bgColor);
+    }
+  }
+
+  // Create shapes for each new character typed
+  if (text.length > previousLength) {
+    for (let i = previousLength; i < text.length; i++) {
+      let charCode = text.charCodeAt(i);
+
+      // Skip space (32) and newline (10) characters
+      if (charCode === 32 || charCode === 10) {
+        continue;
+      }
+
+      // Random position on right half of screen
+      let x = random(width * 0.5, width);
+      let y = random(0, height);
+
+      if (charCode % 2 === 1) {
+        // Odd: create circle
+        let radius = charCode % 50 + 10;
+        shapes.push(new Circle(x, y, radius));
+      } else {
+        // Even: create rectangle
+        let w = charCode % 60 + 20;
+        let h = w;
+        shapes.push(new Rectangle(x, y, w, h));
+      }
+    }
+  } else if (text.length < previousLength) {
+    shapes = shapes.slice(0, text.length);
+  }
+}
+
+function draw() {
+  // Use the background color set when a word is completed
+  background(bgColor);
+
+  fill(230);
+  rect(0, 0, width * 0.5, height);
+
+  // Draw all shapes
+  noStroke();
+  for (let shape of shapes) {
+    // Reset fill to white for regular shapes
+    fill(255);
+    shape.display();
+  }
+}
+
+
 function calculateAsciiTotal() {
   let text = input.value();
 
@@ -35,12 +109,23 @@ function calculateAsciiTotal() {
     asciiTotal += text.charCodeAt(i);
   }
 
+  // Check if space or return was just typed
+  let spaceTyped = false;
+  if (text.length > lastTextLength) {
+    let lastChar = text.charAt(text.length - 1);
+    if (lastChar === ' ' || lastChar === '\n') {
+      spaceTyped = true;
+    }
+  }
+
   // Calculate ASCII total for each word
   wordAsciiTotals = [];
-  let words = text.split(/\s+/); // Split by whitespace
+  let wordsTemp = text.split(/\s+/); // Split by whitespace
+  words = [];
 
-  for (let word of words) {
+  for (let word of wordsTemp) {
     if (word.length > 0) {
+      words.push(word);
       let wordTotal = 0;
       for (let i = 0; i < word.length; i++) {
         wordTotal += word.charCodeAt(i);
@@ -49,40 +134,26 @@ function calculateAsciiTotal() {
     }
   }
 
+  lastTextLength = text.length;
+
   console.log('Total ASCII:', asciiTotal);
-  //console.log('Word ASCII Totals:', wordAsciiTotals);
-}
 
-function draw() {
-  background(0);
-  flock.run();
-  fill(230);
-  rect(0, 0, width * 0.5, height);
-  
-}
-
-
-
-
-
-class Flock {
-  constructor() {
-    // Initialize the array of boids
-    this.boids = [];
-  }
-
-  run() {
-    for (let boid of this.boids) {
-      // Pass the entire list of boids to each boid individually
-      boid.run(this.boids);
-    }
-  }
-
-  addBoid(b) {
-    this.boids.push(b);
-  }
+  // Trigger visual effects
+  handleVisualEffects(text, spaceTyped);
 }
 
 function windowResized() {
+  let oldWidth = width;
+  let oldHeight = height;
+
   resizeCanvas(windowWidth, windowHeight);
+
+  // Resize and reposition textarea
+  input.size(width * 0.4, height - 40);
+
+  // Scale all shape positions proportionally
+  for (let shape of shapes) {
+    shape.position.x = (shape.position.x / oldWidth) * width;
+    shape.position.y = (shape.position.y / oldHeight) * height;
+  }
 }
