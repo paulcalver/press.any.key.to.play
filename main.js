@@ -35,16 +35,22 @@ async function getColorFromWord(word) {
     if (Array.isArray(colors) && colors.length > 0) {
       const colorData = colors[0];
       console.log('Color data:', colorData);
-      
+
+      // Check if the color name is an exact match (case insensitive)
+      if (colorData.name && colorData.name.toLowerCase() !== word.toLowerCase()) {
+        console.log('Not an exact match:', colorData.name, 'vs', word);
+        return null;
+      }
+
       // Try to get hex value and convert
       if (colorData.hex) {
         let hexValue = colorData.hex;
         if (hexValue.startsWith('#')) hexValue = hexValue.slice(1);
-        
+
         const r = parseInt(hexValue.substr(0, 2), 16) / 255 * 360;
         const g = parseInt(hexValue.substr(2, 2), 16) / 255 * 100;
         const b = parseInt(hexValue.substr(4, 2), 16) / 255 * 100;
-        
+
         // Just use the hex directly with p5
         const col = color('#' + hexValue);
         colorCache[word] = col;
@@ -65,7 +71,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   colorMode(HSB, 360, 100, 100, 255);
   bgColor = color(0, 0, 100); // FIXED: Initialize as color object
-  
+
   // Create text input area on the left with no border
   input = createElement('textarea');
   input.position(20, 20);
@@ -82,6 +88,28 @@ function setup() {
 
 let lastTextLength = 0;
 
+function parseNumberWord(word) {
+  const numberWords = {
+    'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+    'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+    'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+    'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20
+  };
+
+  // Check if it's a word number
+  if (numberWords[word] !== undefined) {
+    return numberWords[word];
+  }
+
+  // Check if it's a digit
+  let num = parseInt(word);
+  if (!isNaN(num) && num > 0 && num <= 100) {
+    return num;
+  }
+
+  return null;
+}
+
 async function handleVisualEffects(text, spaceTyped) {
   let previousLength = shapes.length;
 
@@ -93,25 +121,83 @@ async function handleVisualEffects(text, spaceTyped) {
     let lastWordTotal = wordAsciiTotals[wordAsciiTotals.length - 1];
     console.log('Word completed:', lastWord, 'ASCII:', lastWordTotal);
 
-    // Special word conditions
-    if (lastWord === 'circle') {
-      let x = width / 2;
-      let y = height / 2;
-      let circleColor = color(random(360), 100, 100);
-      let startRadius = 10;
-      let targetRadius = width * 0.05;
-      let growthSpeed = 50;
-      let circle = new Circle(x, y, startRadius, circleColor, targetRadius, growthSpeed);
-      circle.setSpeed(random(2, 5));
-      shapes.push(circle);
-      console.log('Circle created!');
+    // Check if the previous word is a number
+    let count = 1;
+    let actualCommand = lastWord;
+
+    if (words.length >= 2) {
+      let previousWord = words[words.length - 2].toLowerCase().replace(/[.,!?;:]/g, '');
+      let parsedNumber = parseNumberWord(previousWord);
+
+      if (parsedNumber !== null) {
+        count = parsedNumber;
+        actualCommand = lastWord;
+        console.log(`Found number: ${count} ${actualCommand}`);
+      }
     }
-    else if (lastWord === 'line') {
-      let amplitude = random(15, 400);
-      let frequency = random(0.3, 0.8);
-      let newLine = new Line(amplitude, frequency, false);
-      shapes.push(newLine);
-      console.log('Line created!');
+
+    lastWord = actualCommand;
+
+    // Special word conditions
+    if (lastWord === 'circle' || lastWord === 'c' || lastWord === 'circles'  || lastWord === 'round') {
+      for (let n = 0; n < count; n++) {
+        let x = random(width);
+        let y = random(height);
+        let circleColor = color(random(360), 100, 100);
+        let startRadius = random(10, 20);
+        let targetRadius = random(100, 140);
+        let growthSpeed = 0.5;
+        let circle = new Circle(x, y, startRadius, circleColor, targetRadius, growthSpeed);
+        circle.setSpeed(random(2, 5));
+        shapes.push(circle);
+      }
+      console.log(`${count} circle(s) created!`);
+    }
+    else if (lastWord === 'line' || lastWord === 'l' || lastWord === 'lines' || lastWord === 'waves') {
+      for (let n = 0; n < count; n++) {
+        let amplitude = random(15, 400);
+        let frequency = random(0.3, 0.8);
+        let newLine = new Line(amplitude, frequency, false);
+        shapes.push(newLine);
+      }
+      console.log(`${count} line(s) created!`);
+    }
+    else if (lastWord === 'triangle' || lastWord === 't' || lastWord === 'triangles' || lastWord === 'tri') {
+      for (let n = 0; n < count; n++) {
+        let x = random(width);
+        let y = random(height);
+        let triangleColor = color(random(360), 100, 100);
+        let size = random(40, 120);
+        let triangle = new Triangle(x, y, size, triangleColor);
+        triangle.setSpeed(random(2, 5));
+        shapes.push(triangle);
+      }
+      console.log(`${count} triangle(s) created!`);
+    }
+    else if (lastWord === 'square' || lastWord === 's' || lastWord === 'squares' || lastWord === 'box') {
+      for (let n = 0; n < count; n++) {
+        let x = random(width);
+        let y = random(height);
+        let squareColor = color(random(360), 100, 100);
+        let size = random(40, 100);
+        let square = new Square(x, y, size, squareColor);
+        square.setSpeed(random(2, 5));
+        shapes.push(square);
+      }
+      console.log(`${count} square(s) created!`);
+    }
+    else if (lastWord === 'rectangle' || lastWord === 'rect' || lastWord === 'rectangles' || lastWord === 'bar') {
+      for (let n = 0; n < count; n++) {
+        let x = random(width);
+        let y = random(height);
+        let rectColor = color(random(360), 100, 100);
+        let w = random(60, 150);
+        let h = random(30, 80);
+        let rectangle = new Rectangle(x, y, w, h, rectColor);
+        rectangle.setSpeed(random(2, 5));
+        shapes.push(rectangle);
+      }
+      console.log(`${count} rectangle(s) created!`);
     }
     else if (lastWord === 'fast' || lastWord === 'faster') {
       for (let shape of shapes) {
@@ -128,19 +214,39 @@ async function handleVisualEffects(text, spaceTyped) {
         shape.setSpeed(0);
       }
     }
+    else if (lastWord === 'love' || lastWord === 'attract' || lastWord === 'attraction' || lastWord === 'pull') {
+      // Enable attraction for all shapes
+      for (let shape of shapes) {
+        shape.enableAttraction();
+      }
+      console.log('Shapes are now attracted to each other!');
+    }
     else if (lastWord === 'clean') {
-      // Clear all existing shapes
-      shapes = [];
-      // Create a large white circle that grows very fast
+      // Don't clear shapes yet - let the clean circle cover them first
+      // Mark all existing shapes for removal
+      for (let shape of shapes) {
+        shape.markedForClean = true;
+      }
+
+      // Create a large circle with current background color that grows to cover everything
       let x = width / 2;
       let y = height / 2;
-      let cleanColor = color(0, 0, 100); // White in HSB
+      let cleanColor = color(hue(bgColor), saturation(bgColor), brightness(bgColor)); // Use current bg color
       let startRadius = 10;
       let targetRadius = max(width, height) * 2; // Large enough to cover entire canvas
-      let growthSpeed = max(width, height) * 0.1; // Very fast growth
+      let growthSpeed = 20; // Fast growth
       let cleanCircle = new Circle(x, y, startRadius, cleanColor, targetRadius, growthSpeed, true);
+      cleanCircle.isCleanCircle = true; // Mark this as the clean circle
       shapes.push(cleanCircle);
-      console.log('Clean circle created!');
+
+      // Clear the text area
+      input.value('');
+      words = [];
+      wordAsciiTotals = [];
+      asciiTotal = 0;
+      lastTextLength = 0;
+
+      console.log('Clean circle created with bg color!');
     }
     else {
       // Try to get color from API
@@ -148,11 +254,8 @@ async function handleVisualEffects(text, spaceTyped) {
       if (apiColor) {
         bgColor = apiColor;
         console.log('BG Color from API:', lastWord);
-      } else {
-        // Default: change background color based on ASCII
-        bgColor = color((lastWordTotal % 360), 100, 100);
-        console.log('BG Color from ASCII:', lastWordTotal);
       }
+      // If API returns null, don't change background color at all
     }
   }
 }
@@ -163,11 +266,38 @@ function draw() {
 
   // Update and draw all shapes
   noStroke();
-  for (let i = shapes.length - 1; i >= 0; i--) {
+  // Draw shapes forward (oldest to newest) so newest are on top
+  for (let i = 0; i < shapes.length; i++) {
+    // If attraction is enabled, make shapes seek each other
+    // Only process Circle instances (they have vector position and seeking capability)
+    if (shapes[i].isAttracting && shapes[i] instanceof Circle) {
+      // Find closest Circle
+      let closest = null;
+      let closestDist = Infinity;
+
+      for (let j = 0; j < shapes.length; j++) {
+        if (i !== j && shapes[j] instanceof Circle) {
+          let d = p5.Vector.dist(shapes[i].position, shapes[j].position);
+          if (d < closestDist) {
+            closestDist = d;
+            closest = shapes[j];
+          }
+        }
+      }
+
+      // Seek towards closest shape
+      if (closest) {
+        let force = shapes[i].seek(closest.position);
+        shapes[i].acceleration.add(force);
+      }
+    }
+
     shapes[i].update();
     shapes[i].displayWithWrap();
+  }
 
-    // Remove dead shapes
+  // Remove dead shapes in reverse to avoid index issues
+  for (let i = shapes.length - 1; i >= 0; i--) {
     if (!shapes[i].isAlive()) {
       shapes.splice(i, 1);
     }
