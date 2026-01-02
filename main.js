@@ -3,7 +3,7 @@ let asciiTotal = 0;
 let wordAsciiTotals = [];
 let words = [];
 let shapes = [];
-let bgColor = 0;
+let bgColor = 200;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -65,7 +65,7 @@ function handleVisualEffects(text, spaceTyped) {
       }
 
       // Random position on right half of screen
-      let x = random(width * 0.5, width);
+      let x = random(width, width);
       let y = random(0, height);
 
       if (charCode % 2 === 1) {
@@ -97,8 +97,8 @@ function draw() {
     shape.display();
   }
 
-  fill(230);
-  rect(0, 0, width * 0.5, height);
+  //fill(230);
+  //rect(0, 0, width * 0.5, height);
 
 }
 
