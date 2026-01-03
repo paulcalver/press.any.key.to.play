@@ -2,52 +2,38 @@ let shapes = [];
 let bgColor;
 let score = 0;
 let lastKeyTime = {
-  'circle': 0,
-  'line': 0  // Track both line types together
+  circle: 0,
+  line: 0
 };
-let keyTimeout = 1000; // 1 second of no keys before that shape type starts dying
+let keyTimeout = 1000; // 1 second before shapes start dying
 
-// Keyboard mapping configuration
+// Keyboard mapping
 const keyMap = {
-  // Top row - Lines (alternating horizontal and vertical)
-  'q': 'line-h',
-  'w': 'line-v',
-  'e': 'line-h',
-  'r': 'line-v',
-  't': 'line-h',
-  'y': 'line-v',
-  'u': 'line-h',
-  'i': 'line-v',
-  'o': 'line-h',
-  'p': 'line-v',
+  // Top row - Lines (alternating H/V)
+  'q': 'line-h', 'w': 'line-v', 'e': 'line-h', 'r': 'line-v', 't': 'line-h',
+  'y': 'line-v', 'u': 'line-h', 'i': 'line-v', 'o': 'line-h', 'p': 'line-v',
   
-  // Middle row - All speed
-  'a': 'speed',
-  's': 'speed',
-  'd': 'speed',
-  'f': 'speed',
-  'g': 'speed',
-  'h': 'speed',
-  'j': 'speed',
-  'k': 'speed',
-  'l': 'speed',
+  // Middle row - Speed
+  'a': 'speed', 's': 'speed', 'd': 'speed', 'f': 'speed', 'g': 'speed',
+  'h': 'speed', 'j': 'speed', 'k': 'speed', 'l': 'speed',
   
-  // Bottom row - All circles
-  'z': 'circle',
-  'x': 'circle',
-  'c': 'circle',
-  'v': 'circle',
-  'b': 'circle',
-  'n': 'circle',
-  'm': 'circle',
+  // Bottom row - Circles
+  'z': 'circle', 'x': 'circle', 'c': 'circle', 'v': 'circle',
+  'b': 'circle', 'n': 'circle', 'm': 'circle',
 };
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   colorMode(HSB, 360, 100, 100, 255);
-  bgColor = color(220, 60, 20); // Dark blue background
   
-  // Initialize last key times
+  // Random background from specified colors
+  const bgColors = [
+    '#fffc79', // Yellow
+    '#66386a', // Purple
+    '#ef4026'  // Red-orange
+  ];
+  bgColor = color(random(bgColors));
+  
   let currentTime = millis();
   lastKeyTime.circle = currentTime;
   lastKeyTime.line = currentTime;
@@ -58,7 +44,7 @@ function draw() {
   
   let currentTime = millis();
   
-  // Apply death animation per shape type based on inactivity
+  // Apply death animation based on shape type inactivity
   for (let shape of shapes) {
     let shapeType = shape instanceof Line ? 'line' : 'circle';
     let timeSinceKey = currentTime - lastKeyTime[shapeType];
@@ -68,74 +54,57 @@ function draw() {
     }
   }
 
-  // Apply flocking behavior to circles only
-  // for (let i = 0; i < shapes.length; i++) {
-  //   if (shapes[i] instanceof Circle) {
-  //     shapes[i].flock(shapes);
-  //   }
-  // }
-
   // Update and draw all shapes
   noStroke();
-  for (let i = 0; i < shapes.length; i++) {
-    if (shapes[i] instanceof Line) {
-      shapes[i].update(shapes);
+  for (let shape of shapes) {
+    if (shape instanceof Line) {
+      shape.update(shapes);
     } else {
-      shapes[i].update();
+      shape.update();
     }
-    
-    shapes[i].displayWithWrap();
+    shape.displayWithWrap();
   }
 
-  // Remove dead shapes (off-screen)
+  // Remove shapes that fell off screen
   for (let i = shapes.length - 1; i >= 0; i--) {
-    if (!shapes[i].isAlive() || isOffScreen(shapes[i])) {
+    if (isOffScreen(shapes[i])) {
       shapes.splice(i, 1);
     }
   }
   
-  // Update score based on chaos
   updateScore();
-  
-  // Display score
   displayScore();
 }
 
 function applyDeathAnimation(shape) {
-  // Mark shape as dying and initialize death timer
   if (!shape.isDying) {
     shape.isDying = true;
     shape.deathTimer = 0;
-    shape.fallVelocity = 0; // Start with no falling velocity
+    shape.fallVelocity = 0;
   }
   
   shape.deathTimer++;
   
-  // Phase 1 (frames 0-60): Lose energy/amplitude
+  // Phase 1 (0-60 frames): Lose energy/amplitude
   if (shape.deathTimer < 60) {
     if (shape instanceof Line) {
-      // Lines lose amplitude (become straight)
       shape.amplitude *= 0.92;
       shape.oscillationSpeed *= 0.95;
-    } else if (shape.position) {
-      // Circles lose energy (slow down)
-      if (shape.velocity) {
-        shape.velocity.mult(0.92);
-      }
+    } else {
+      if (shape.velocity) shape.velocity.mult(0.92);
       shape.speed *= 0.92;
     }
   }
   
-  // Phase 2 (frame 60+): Gravity kicks in, everything falls with acceleration
+  // Phase 2 (60+ frames): Gravity - fall off screen with increasing acceleration
   if (shape.deathTimer >= 60) {
-    // Apply gravity acceleration
-    shape.fallVelocity += 0.4; // Gravity acceleration constant
+    // Gravity increases over time - starts at 0.4, increases by 0.05 every frame
+    let gravityAccel = 0.4 + (shape.deathTimer - 60) * 0.05;
+    shape.fallVelocity += gravityAccel;
     
     if (shape instanceof Line) {
-      // Lines fall down by increasing vertical offset
       shape.verticalOffset += shape.fallVelocity;
-    } else if (shape.position) {
-      // Circles fall down with accelerating gravity
+    } else {
       shape.position.y += shape.fallVelocity;
     }
   }
@@ -143,61 +112,50 @@ function applyDeathAnimation(shape) {
 
 function isOffScreen(shape) {
   if (shape instanceof Line) {
-    // Lines are off screen when they fall below the bottom
     return shape.verticalOffset > height + 200;
   }
-  
-  if (!shape.position) return false;
-  
-  // Shapes are off screen when they fall below the bottom
-  return shape.position.y > height + 200;
+  return shape.position && shape.position.y > height + 200;
 }
 
 function updateScore() {
-  // Calculate chaos factor - score is directly based on current state
-  let shapeCount = shapes.length;
+  // Console log shapes array length
+  console.log('Shapes count:', shapes.length);
+  
+  // If no shapes, score is 0
+  if (shapes.length === 0) {
+    score = 0;
+    return;
+  }
+  
   let totalSpeed = 0;
-  let speedCount = 0;
   
   for (let shape of shapes) {
     if (shape.speed !== undefined) {
       totalSpeed += shape.speed;
-      speedCount++;
     } else if (shape instanceof Line) {
-      // Lines contribute oscillation speed to chaos
-      totalSpeed += shape.oscillationSpeed * 100; // Scale up for visibility
-      speedCount++;
+      totalSpeed += shape.oscillationSpeed * 100;
     }
   }
   
-  // Score is directly the current chaos level
-  // More shapes + higher speeds = higher score
-  score = shapeCount * 10 + totalSpeed * 5;
-  
-  // Round to integer
-  score = Math.floor(score);
+  score = Math.floor(shapes.length * 10 + totalSpeed * 5);
 }
 
 function displayScore() {
   push();
+  blendMode(DIFFERENCE);
   textAlign(CENTER, CENTER);
   textSize(200);
-  fill(255, 255, 255, 40); // Semi-transparent white
-  text(Math.floor(score), width / 2, height / 2);
+  fill(255); // White with DIFFERENCE mode inverts everything
+  text(score, width / 2, height / 2);
   pop();
 }
 
 function keyPressed() {
   let key_lower = key.toLowerCase();
-  
-  // Check if key is mapped
-  if (!keyMap[key_lower]) {
-    return;
-  }
+  if (!keyMap[key_lower]) return;
   
   let action = keyMap[key_lower];
   
-  // Update last key time for the relevant shape type
   if (action === 'circle') {
     lastKeyTime.circle = millis();
     createCircle();
@@ -209,7 +167,6 @@ function keyPressed() {
       createVerticalLine();
     }
   } else if (action === 'speed') {
-    // Speed affects all shapes, update both timers
     lastKeyTime.circle = millis();
     lastKeyTime.line = millis();
     speedUp();
@@ -219,32 +176,24 @@ function keyPressed() {
 }
 
 function createCircle() {
-  let x = random(width);
-  let y = random(height);
-  let shapeColor = color(random(360), 100, 100);
-  
-  // Use expanding circles
-  let startRadius = random(5, 15);
-  let targetRadius = random(80, 140);
-  let growthSpeed = random(0.3, 0.8);
-  
-  let circle = new Circle(x, y, startRadius, shapeColor, targetRadius, growthSpeed);
+  let circle = new Circle(
+    random(width),
+    random(height),
+    random(5, 15),
+    color(random(360), 100, 100),
+    random(80, 140),
+    random(0.3, 0.8)
+  );
   circle.setSpeed(random(2, 5));
   shapes.push(circle);
 }
 
 function createHorizontalLine() {
-  let amplitude = random(50, 200);
-  let frequency = random(0.3, 0.8);
-  let hLine = new Line(amplitude, frequency, true);
-  shapes.push(hLine);
+  shapes.push(new Line(random(50, 200), random(0.3, 0.8), true));
 }
 
 function createVerticalLine() {
-  let amplitude = random(50, 200);
-  let frequency = random(0.3, 0.8);
-  let vLine = new Line(amplitude, frequency, false);
-  shapes.push(vLine);
+  shapes.push(new Line(random(50, 200), random(0.3, 0.8), false));
 }
 
 function speedUp() {
@@ -256,7 +205,6 @@ function speedUp() {
 function windowResized() {
   let oldWidth = width;
   let oldHeight = height;
-
   resizeCanvas(windowWidth, windowHeight);
 
   for (let shape of shapes) {
