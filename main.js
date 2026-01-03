@@ -214,6 +214,87 @@ async function handleVisualEffects(text, spaceTyped) {
         shape.setSpeed(0);
       }
     }
+    else if (lastWord === 'spin' || lastWord === 'rotate' || lastWord === 'twirl') {
+      // Make all shapes spin faster
+      for (let shape of shapes) {
+        if (shape instanceof Square || shape instanceof Rectangle || shape instanceof Triangle) {
+          shape.spinSpeed = (shape.spinSpeed || 0.01) * 3;
+        }
+      }
+      console.log('Shapes are spinning!');
+    }
+    else if (lastWord === 'chaos' || lastWord === 'wild' || lastWord === 'crazy') {
+      // Every shape gets a random burst of speed in a random direction
+      for (let shape of shapes) {
+        if (shape.setSpeed) {
+          shape.setSpeed(random(5, 15));
+        }
+        // Lines get super oscillatory
+        if (shape instanceof Line) {
+          shape.oscillationSpeed = random(0.05, 0.15);
+          shape.amplitude = random(50, 200);
+        }
+      }
+      console.log('CHAOS!');
+    }
+    else if (lastWord === 'freeze' || lastWord === 'pause' || lastWord === 'still') {
+      // Freeze everything in place
+      for (let shape of shapes) {
+        if (shape.velocity) {
+          shape.velocity.mult(0);
+        }
+        if (shape instanceof Line) {
+          shape.oscillationSpeed = 0;
+          shape.driftSpeed = 0;
+        }
+      }
+      console.log('Everything frozen!');
+    }
+    else if (lastWord === 'scatter' || lastWord === 'explode' || lastWord === 'burst') {
+      // All shapes flee from center
+      let center = createVector(width / 2, height / 2);
+      for (let shape of shapes) {
+        if (shape.position) {
+          let away = p5.Vector.sub(shape.position, center);
+          away.setMag(random(8, 15));
+          shape.velocity = away;
+          shape.speed = away.mag();
+        }
+      }
+      console.log('SCATTER!');
+    }
+    else if (lastWord === 'shrink' || lastWord === 'small' || lastWord === 'tiny') {
+      // Shrink all shapes
+      for (let shape of shapes) {
+        if (shape instanceof Circle) {
+          shape.radius *= 0.6;
+        } else if (shape instanceof Triangle || shape instanceof Square) {
+          shape.size *= 0.6;
+        } else if (shape instanceof Rectangle) {
+          shape.width *= 0.6;
+          shape.height *= 0.6;
+        } else if (shape instanceof Line) {
+          shape.strokeWeight *= 0.6;
+        }
+      }
+      console.log('Shapes shrinking!');
+    }
+    else if (lastWord === 'grow' || lastWord === 'big' || lastWord === 'large') {
+      // Grow all shapes
+      for (let shape of shapes) {
+        if (shape instanceof Circle) {
+          shape.radius *= 1.4;
+        } else if (shape instanceof Triangle || shape instanceof Square) {
+          shape.size *= 1.4;
+        } else if (shape instanceof Rectangle) {
+          shape.width *= 1.4;
+          shape.height *= 1.4;
+        } else if (shape instanceof Line) {
+          shape.strokeWeight *= 1.4;
+        }
+      }
+      console.log('Shapes growing!');
+    }
     else if (lastWord === 'love' || lastWord === 'attract' || lastWord === 'attraction' || lastWord === 'pull') {
       // Enable attraction for all shapes
       for (let shape of shapes) {
@@ -264,6 +345,23 @@ function draw() {
   // Use the background color set when a word is completed
   background(bgColor);
 
+  // Apply flocking behavior to all moving shapes
+  for (let i = 0; i < shapes.length; i++) {
+    if (shapes[i] instanceof Circle || shapes[i] instanceof Triangle || 
+        shapes[i] instanceof Square || shapes[i] instanceof Rectangle) {
+      
+      // Don't apply flocking to growing circles or clean circles
+      if (shapes[i] instanceof Circle && (shapes[i].isGrowing || shapes[i].isCleanCircle)) {
+        continue;
+      }
+      
+      // Apply flocking if shape has any speed or is attracting
+      if (shapes[i].speed > 0 || shapes[i].isAttracting) {
+        shapes[i].flock(shapes);
+      }
+    }
+  }
+
   // Update and draw all shapes
   noStroke();
   // Draw shapes forward (oldest to newest) so newest are on top
@@ -292,7 +390,13 @@ function draw() {
       }
     }
 
-    shapes[i].update();
+    // Pass shapes array to update for lines to sense density
+    if (shapes[i] instanceof Line) {
+      shapes[i].update(shapes);
+    } else {
+      shapes[i].update();
+    }
+    
     shapes[i].displayWithWrap();
   }
 
