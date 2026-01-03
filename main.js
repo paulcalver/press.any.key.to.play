@@ -15,7 +15,7 @@ let synthLineH;
 let synthLineV;
 let synthSpeed;
 let synthDrop;
-let synthAngry;
+
 
 // Preload sounds
 function preload() {
@@ -27,11 +27,11 @@ const keyMap = {
   // Top row - Lines (alternating H/V)
   'q': 'line-h', 'w': 'line-v', 'e': 'line-h', 'r': 'line-v', 't': 'line-h',
   'y': 'line-v', 'u': 'line-h', 'i': 'line-v', 'o': 'line-h', 'p': 'line-v',
-  
+
   // Middle row - Speed
   'a': 'speed', 's': 'speed', 'd': 'speed', 'f': 'speed', 'g': 'speed',
   'h': 'speed', 'j': 'speed', 'k': 'speed', 'l': 'speed',
-  
+
   // Bottom row - Circles
   'z': 'circle', 'x': 'circle', 'c': 'circle', 'v': 'circle',
   'b': 'circle', 'n': 'circle', 'm': 'circle',
@@ -41,7 +41,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   colorMode(HSB, 360, 100, 100, 255);
   textFont('Rubik One');
-  
+
   // Random background from specified colors
   const bgColors = [
     '#fffc79', // Yellow
@@ -49,47 +49,44 @@ function setup() {
     '#ef4026'  // Red-orange
   ];
   bgColor = color(random(bgColors));
-  
+
   let currentTime = millis();
   lastKeyTime.circle = currentTime;
   lastKeyTime.line = currentTime;
-  
+
   // Initialize synthesizers
   synthCircle = new p5.Oscillator('sine');
   synthCircle.amp(0);
   synthCircle.start();
-  
+
   synthLineH = new p5.Oscillator('triangle');
   synthLineH.amp(0);
   synthLineH.start();
-  
+
   synthLineV = new p5.Oscillator('triangle');
   synthLineV.amp(0);
   synthLineV.start();
-  
+
   synthSpeed = new p5.Oscillator('square');
   synthSpeed.amp(0);
   synthSpeed.start();
-  
+
   synthDrop = new p5.Oscillator('sine');
   synthDrop.amp(0);
   synthDrop.start();
-  
-  synthAngry = new p5.Oscillator('sawtooth');
-  synthAngry.amp(0);
-  synthAngry.start();
+
 }
 
 function draw() {
   background(bgColor);
-  
+
   let currentTime = millis();
-  
+
   // Apply death animation based on shape type inactivity
   for (let shape of shapes) {
     let shapeType = shape instanceof Line ? 'line' : 'circle';
     let timeSinceKey = currentTime - lastKeyTime[shapeType];
-    
+
     if (timeSinceKey > keyTimeout) {
       applyDeathAnimation(shape);
     }
@@ -108,15 +105,15 @@ function draw() {
       shapes.splice(i, 1);
     }
   }
-  
+
   updateScore();
   displayScore();
-  
+
   // Show start message if user hasn't started yet
   if (!hasStarted) {
     displayStartMessage();
   }
-  
+
   // Draw fullscreen button
   drawFullscreenButton();
 }
@@ -127,9 +124,9 @@ function applyDeathAnimation(shape) {
     shape.deathTimer = 0;
     shape.fallVelocity = 0;
   }
-  
+
   shape.deathTimer++;
-  
+
   // Phase 1 (0-60 frames): Lose energy/amplitude
   if (shape.deathTimer < 60) {
     if (shape instanceof Line) {
@@ -140,19 +137,19 @@ function applyDeathAnimation(shape) {
       shape.speed *= 0.92;
     }
   }
-  
+
   // Phase 2 (60+ frames): Gravity - fall off screen with increasing acceleration
   if (shape.deathTimer === 60) {
     // Play drop sound once when gravity kicks in
-    let dropFreq = map(shape.position ? shape.position.x : width/2, 0, width, 100, 300);
+    let dropFreq = map(shape.position ? shape.position.x : width / 2, 0, width, 100, 300);
     playSound(synthDrop, dropFreq, 0.3);
   }
-  
+
   if (shape.deathTimer >= 60) {
     // Gravity increases over time - starts at 0.4, increases by 0.05 every frame
     let gravityAccel = 0.4 + (shape.deathTimer - 60) * 0.05;
     shape.fallVelocity += gravityAccel;
-    
+
     if (shape instanceof Line) {
       shape.verticalOffset += shape.fallVelocity;
     } else {
@@ -169,17 +166,15 @@ function isOffScreen(shape) {
 }
 
 function updateScore() {
-  // Console log shapes array length
-  console.log('Shapes count:', shapes.length);
   
   // If no shapes, score is 0
   if (shapes.length === 0) {
     score = 0;
     return;
   }
-  
+
   let totalSpeed = 0;
-  
+
   for (let shape of shapes) {
     if (shape instanceof Line) {
       // Lines use oscillationSpeed
@@ -189,7 +184,7 @@ function updateScore() {
       totalSpeed += shape.speed;
     }
   }
-  
+
   score = Math.floor(shapes.length * 10 + totalSpeed * 5);
 }
 
@@ -222,42 +217,21 @@ function playSound(synth, freq, duration = 0.1) {
   }, duration * 1000);
 }
 
-// Play angry harsh sound (low growl with vibrato)
-function playAngrySound() {
-  let baseFreq = random(80, 120); // Low, menacing
-  
-  // Create harsh descending sound
-  synthAngry.freq(baseFreq);
-  synthAngry.amp(0.4, 0.01);
-  
-  // Descend frequency over time (angry growl)
-  let steps = 10;
-  for (let i = 0; i < steps; i++) {
-    setTimeout(() => {
-      synthAngry.freq(baseFreq - (i * 5)); // Descend
-    }, i * 20);
-  }
-  
-  // Fade out
-  setTimeout(() => {
-    synthAngry.amp(0, 0.15);
-  }, 200);
-}
 
 function keyPressed() {
   let key_lower = key.toLowerCase();
   if (!keyMap[key_lower]) return;
-  
+
   // Resume audio context on first interaction (fixes browser audio policy)
   if (getAudioContext().state !== 'running') {
     getAudioContext().resume();
   }
-  
+
   // Mark as started on first key press
   hasStarted = true;
-  
+
   let action = keyMap[key_lower];
-  
+
   if (action === 'circle') {
     lastKeyTime.circle = millis();
     createCircle();
@@ -274,14 +248,24 @@ function keyPressed() {
   } else if (action === 'speed') {
     lastKeyTime.circle = millis();
     lastKeyTime.line = millis();
-    
+
     // Check if there are any shapes to speed up
     if (shapes.length === 0) {
-      // Play angry sound when trying to speed up nothing
-      playAngrySound();
+      // Swap out middle row for random shape when score is zero
+      if (random() > 0.33) {
+        createVerticalLine();
+        playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
+      } else if (random() > 0.66) {
+        createCircle();
+        playSound(synthCircle, random(400, 800), 0.15); // Bubble-like
+      } else {
+        createHorizontalLine();
+        playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
+      }
+
     } else {
       speedUp();
-      
+
       // Calculate average speed to map to pitch
       let totalSpeed = 0;
       let speedCount = 0;
@@ -295,13 +279,13 @@ function keyPressed() {
         }
       }
       let avgSpeed = speedCount > 0 ? totalSpeed / speedCount : 0;
-      
+
       // Map average speed to frequency (600-2000 Hz, gets higher as speed increases)
       let speedFreq = map(avgSpeed, 0, 50, 100, 2000, true);
       playSound(synthSpeed, speedFreq, 0.05);
     }
   }
-  
+
   return false;
 }
 
@@ -351,21 +335,21 @@ function drawFullscreenButton() {
   textAlign(LEFT, BOTTOM);
   textSize(width * 0.01); // 1% of width
   fill(255);
-  
+
   let padding = 20;
   let buttonText = isFullscreen ? 'X' : 'FS';
   text(buttonText, padding, height - padding);
-  
+
   // Change cursor to pointer when hovering over button
   let buttonWidth = width * 0.01 * 2; // Rough width estimate
   let buttonHeight = width * 0.01;
-  
+
   if (mouseX < padding + buttonWidth && mouseY > height - padding - buttonHeight) {
     cursor(HAND);
   } else {
     cursor(ARROW);
   }
-  
+
   pop();
 }
 
@@ -374,46 +358,46 @@ function mousePressed() {
   let padding = 20;
   let buttonWidth = width * 0.01 * 2; // Rough width estimate
   let buttonHeight = width * 0.01;
-  
+
   if (mouseX < padding + buttonWidth && mouseY > height - padding - buttonHeight) {
     // Toggle fullscreen
     let fs = fullscreen();
     fullscreen(!fs);
     isFullscreen = !fs;
-    
+
     // Resize canvas after fullscreen toggle
     setTimeout(() => {
       resizeCanvas(windowWidth, windowHeight);
     }, 100);
-    
+
     return false;
   }
-  
+
   // Otherwise, cycle background color and invert shapes
   const bgColors = [
     '#fffc79', // Yellow
     '#66386a', // Purple
     '#ef4026'  // Red-orange
   ];
-  
+
   // Find current background and switch to next
   let currentBg = bgColor.toString('#rrggbb');
   let currentIndex = bgColors.indexOf(currentBg);
   let nextIndex = (currentIndex + 1) % bgColors.length;
   bgColor = color(bgColors[nextIndex]);
-  
+
   // Invert all shape colors
   for (let shape of shapes) {
     if (shape.color) {
       let h = hue(shape.color);
       let s = saturation(shape.color);
       let b = brightness(shape.color);
-      
+
       // Invert hue (opposite side of color wheel)
       let newHue = (h + 180) % 360;
       shape.color = color(newHue, s, b);
     }
   }
-  
+
   return false;
 }
