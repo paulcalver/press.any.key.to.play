@@ -17,8 +17,7 @@ class Shape {
     this.perceptionRadius = 100;
     this.separationRadius = 50;
     
-    // this.lifespan = 255; // Start fully opaque
-    // this.fadeRate = 255 / (100 * 60); // Fade over 10 seconds (assuming 60fps)
+    this.isDying = false;
   }
 
   setSpeed(speed) {
@@ -176,17 +175,20 @@ class Shape {
     this.position.add(this.velocity);
     // Reset acceleration each frame
     this.acceleration.mult(0);
+    // Shapes wrap around edges
     this.edges();
-    // this.lifespan -= this.fadeRate;
-    // To be implemented by subclasses
   }
 
   isAlive() {
-    // return this.lifespan > 0;
-    return true;
+    return true; // Death is handled by isOffScreen check in main.js
   }
 
   edges() {
+    // Don't wrap if dying - allow to drift off screen
+    if (this.isDying) {
+      return;
+    }
+    
     if (this.position.x > width) {
       this.position.x = 0;
     } else if (this.position.x < 0) {
@@ -206,6 +208,12 @@ class Shape {
 
   // Check if shape needs to wrap and draw at wrapped positions
   displayWithWrap() {
+    // Don't wrap if dying - just draw once
+    if (this.isDying) {
+      this.display();
+      return;
+    }
+    
     let size = this.getSize ? this.getSize() : 100; // Get shape size for wrapping
 
     // Draw main shape
@@ -319,8 +327,6 @@ class Circle extends Shape {
   }
 
   display() {
-    // let c = color(hue(this.color), saturation(this.color), brightness(this.color), this.lifespan);
-    // fill(c);
     fill(this.color);
     ellipse(this.position.x, this.position.y, this.radius * 2);
   }
@@ -333,6 +339,7 @@ class Line {
     this.timeOffset = random(1000);
     this.isHorizontal = isHorizontal;
     this.position = random(isHorizontal ? height : width);
+    this.verticalOffset = 0; // For falling animation
     this.points = 200;
     this.strokeWeight = 80;
     this.oscillationSpeed = random(0.01, 0.02);
@@ -352,8 +359,7 @@ class Line {
     this.baseAmplitude = amplitude;
     this.amplitudeTarget = amplitude;
     
-    // this.lifespan = 255;
-    // this.fadeRate = 255 / (100 * 60);
+    this.isDying = false;
   }
 
   setSpeed(speed) {
@@ -377,12 +383,14 @@ class Line {
     // Autonomous drift
     this.position += this.driftSpeed * this.driftDirection;
     
-    // Wrap position
-    let maxPos = this.isHorizontal ? height : width;
-    if (this.position > maxPos) {
-      this.position = 0;
-    } else if (this.position < 0) {
-      this.position = maxPos;
+    // Wrap position only if not dying
+    if (!this.isDying) {
+      let maxPos = this.isHorizontal ? height : width;
+      if (this.position > maxPos) {
+        this.position = 0;
+      } else if (this.position < 0) {
+        this.position = maxPos;
+      }
     }
     
     // Lines are curious - move toward areas with more shapes
@@ -431,15 +439,12 @@ class Line {
     if (this.isDead) {
       return false;
     }
-    // return this.lifespan > 0;
-    return true;
+    return true; // Death handled by isOffScreen check
   }
 
   display() {
     push();
 
-    // let c = color(hue(this.color), saturation(this.color), brightness(this.color), this.lifespan);
-    // stroke(c);
     stroke(this.color);
     strokeWeight(this.strokeWeight);
     noFill();
@@ -453,7 +458,7 @@ class Line {
         let x = map(i, 0, this.points - 1, -extension, width + extension);
         let phase = (x / width) * this.frequency * TWO_PI;
         let offset = sin(this.timeOffset + phase) * this.amplitude;
-        let y = this.position + offset;
+        let y = this.position + offset + this.verticalOffset; // Add vertical offset for falling
         curveVertex(x, y);
       }
     } else {
@@ -463,7 +468,7 @@ class Line {
         let phase = (y / height) * this.frequency * TWO_PI;
         let offset = sin(this.timeOffset + phase) * this.amplitude;
         let x = this.position + offset;
-        curveVertex(x, y);
+        curveVertex(x, y + this.verticalOffset); // Add vertical offset for falling
       }
     }
     endShape();
