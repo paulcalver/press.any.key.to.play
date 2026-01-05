@@ -1,12 +1,16 @@
 let shapes = [];
 let bgColor;
 let score = 0;
+
 let lastKeyTime = {
   circle: 0,
   line: 0
 };
+
 let keyTimeout = 3000; // 3 seconds before shapes start dying
 let hasStarted = false; // Track if user has pressed any key
+let displayMakeShapeFirst = false; // Track if "make shape first" message should be displayed
+let makeShapeMessageTime = 0; // Track when the "make shape first" message was triggered
 let isFullscreen = false; // Track fullscreen state
 
 // Sound synths
@@ -15,7 +19,7 @@ let synthLineH;
 let synthLineV;
 let synthSpeed;
 let synthDrop;
-
+let synthAngry;
 
 // Keyboard mapping
 const keyMap = {
@@ -23,16 +27,16 @@ const keyMap = {
   'q': 'line-h', 'w': 'line-v', 'e': 'line-h', 'r': 'line-v', 't': 'line-h',
   'y': 'line-v', 'u': 'line-h', 'i': 'line-v', 'o': 'line-h', 'p': 'line-v',
 
-  // Middle row - Speed
-  'a': 'speed', 's': 'speed', 'd': 'speed', 'f': 'speed', 'g': 'speed',
-  'h': 'speed', 'j': 'speed', 'k': 'speed', 'l': 'speed',
+  // Middle row - Mixed
+  'a': 'line-h', 's': 'line-v', 'd': 'circle', 'f': 'line-h', 'g': 'line-v',
+  'h': 'circle', 'j': 'line-h', 'k': 'line-v', 'l': 'circle',
 
   // Bottom row - Circles
   'z': 'circle', 'x': 'circle', 'c': 'circle', 'v': 'circle',
   'b': 'circle', 'n': 'circle', 'm': 'circle',
 
-  // Spacebar - Change background and invert shapes
-  ' ': 'bgChange',
+  // Spacebar - Speed up all shapes
+  ' ': 'speed',
 };
 
 function setup() {
@@ -72,6 +76,10 @@ function setup() {
   synthDrop = new p5.Oscillator('sine');
   synthDrop.amp(0);
   synthDrop.start();
+
+  synthAngry = new p5.Oscillator('sawtooth');
+  synthAngry.amp(0);
+  synthAngry.start();
 
 }
 
@@ -116,6 +124,15 @@ function draw() {
   // Show start message if user hasn't started yet
   if (!hasStarted) {
     displayStartMessage();
+  }
+
+  if (displayMakeShapeFirst) {
+    // Check if message should fade away after 3 seconds
+    if (currentTime - makeShapeMessageTime > keyTimeout) {
+      displayMakeShapeFirst = false;
+    } else {
+      displayMakeShapeFirstMessage();
+    }
   }
 
   // Draw fullscreen button
@@ -206,9 +223,33 @@ function displayStartMessage() {
   push();
   blendMode(DIFFERENCE);
   textAlign(CENTER, CENTER);
-  textSize(width * 0.02); // 2% of width
+  textSize(width * 0.015); // 1.5% of width
   fill(255);
-  text('Press any key A-Z to Play', width / 2, height / 4);
+  text('Press any key A-Z for shapes and spacebar for speed.\n\nScore points and go wild!', width / 2, height * 0.2);
+  //text('Score points and go wild!', width / 2, height * 0.75);
+  pop();
+}
+
+function displayMakeShapeFirstMessage() {
+  push();
+  blendMode(DIFFERENCE);
+  textAlign(CENTER, CENTER);
+  textSize(width * 0.015); // 1.5% of width
+
+  // Calculate fade based on time elapsed
+  let elapsed = millis() - makeShapeMessageTime;
+  let fadeStart = keyTimeout * 0.6; // Start fading at 60% of timeout (1.8s)
+  let alpha = 255;
+
+  if (elapsed > fadeStart) {
+    // Fade from 255 to 0 over the remaining time with easing
+    let t = map(elapsed, fadeStart, keyTimeout, 0, 1); // Normalize to 0-1
+    let easedT = t * t; // Quadratic ease-in (accelerating fade)
+    alpha = map(easedT, 0, 1, 255, 0);
+  }
+
+  fill(255, alpha);
+  text('Make a shape first with any key A-Z, spacebar is for speed.', width / 2, height * 0.75);
   pop();
 }
 
@@ -221,14 +262,33 @@ function playSound(synth, freq, duration = 0.1) {
   }, duration * 1000);
 }
 
+// Play neutral notification sound (soft pulse)
+function PlayErrorSound() {
+  let baseFreq = 300; // Mid-range, neutral tone
+
+  // Create a gentle two-note pulse
+  synthAngry.freq(baseFreq);
+  synthAngry.amp(0.25, 0.02); // Softer attack
+
+  // Second pulse slightly lower
+  setTimeout(() => {
+    synthAngry.freq(baseFreq * 0.9); // Slightly lower second note
+  }, 100);
+
+  // Fade out
+  setTimeout(() => {
+    synthAngry.amp(0, 0.1);
+  }, 200);
+}
+
 function keyPressed() {
+  let key_lower = key.toLowerCase();
+  if (!keyMap[key_lower]) return;
+
   // Resume audio context on first interaction (fixes browser audio policy)
   if (getAudioContext().state !== 'running') {
     getAudioContext().resume();
   }
-
-  let key_lower = key.toLowerCase();
-  if (!keyMap[key_lower]) return;
 
   // Mark as started on first key press
   //hasStarted = true;
@@ -240,6 +300,7 @@ function keyPressed() {
     createCircle();
     playSound(synthCircle, random(400, 800), 0.15); // Bubble-like
     hasStarted = true;
+    displayMakeShapeFirst = false;
   } else if (action === 'bgChange') {
     changeBGAndInvertShapes();
   } else if (action === 'line-h' || action === 'line-v') {
@@ -248,34 +309,22 @@ function keyPressed() {
       createHorizontalLine();
       playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
       hasStarted = true;
+      displayMakeShapeFirst = false;
     } else {
       createVerticalLine();
       playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
       hasStarted = true;
+      displayMakeShapeFirst = false;
     }
   } else if (action === 'speed') {
     lastKeyTime.circle = millis();
     lastKeyTime.line = millis();
 
-    // Check if there are any live (non-dying) shapes to speed up
-    let liveShapes = shapes.filter(shape => !shape.isDying);
+    if (shapes.length === 0) {
 
-    if (shapes.length === 0 || liveShapes.length === 0) {
-      // Swap out middle row for random shape when no shapes or all shapes are dying
-      let randomChoice = random();
-      if (randomChoice < 0.33) {
-        createVerticalLine();
-        playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
-        hasStarted = true;
-      } else if (randomChoice < 0.66) {
-        createCircle();
-        playSound(synthCircle, random(400, 800), 0.15); // Bubble-like
-        hasStarted = true;
-      } else {
-        createHorizontalLine();
-        playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
-        hasStarted = true;
-      }
+      PlayErrorSound();
+      displayMakeShapeFirst = true;
+      makeShapeMessageTime = millis(); // Record when message was triggered
 
     } else {
       speedUp();
@@ -402,11 +451,6 @@ function changeBGAndInvertShapes() {
 }
 
 function mousePressed() {
-  // Resume audio context on first interaction (fixes browser audio policy)
-  if (getAudioContext().state !== 'running') {
-    getAudioContext().resume();
-  }
-
   // Check if clicked on fullscreen button
   let padding = 20;
   let buttonWidth = width * 0.01 * 2; // Rough width estimate
