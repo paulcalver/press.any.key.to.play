@@ -96,15 +96,15 @@ let soundManager;
 
 // Keyboard mapping
 const keyMap = {
-  // Top row - Lines (alternating H/V)
+  // Top row 
   'q': 'line-random', 'w': 'circle', 'e': 'line-random', 'r': 'circle', 't': 'line-random',
   'y': 'circle', 'u': 'line-random', 'i': 'circle', 'o': 'line-random', 'p': 'circle',
 
-  // Middle row - Mixed
+  // Middle row
   'a': 'line-random', 's': 'circle', 'd': 'line-random', 'f': 'circle', 'g': 'line-random',
   'h': 'circle', 'j': 'line-random', 'k': 'circle', 'l': 'line-random',
 
-  // Bottom row - Circles
+  // Bottom row
   'z': 'circle', 'x': 'line-random', 'c': 'circle', 'v': 'line-random',
   'b': 'circle', 'n': 'line-random', 'm': 'circle',
 
@@ -276,14 +276,14 @@ function displayStartMessage() {
   let titleSize = getTextSize(TEXT_SCALE.TITLE, TEXT_SCALE.MIN_TITLE);
   textSize(titleSize);
   fill(255);
-  text('Press any key to play *_*'.toUpperCase(), width / 2, height * 0.28);
+  text('Press any key A-Z to play *_*'.toUpperCase(), width / 2, height * 0.15);
 
   // Body text with consistent spacing
   let bodySize = getTextSize(TEXT_SCALE.BODY, TEXT_SCALE.MIN_BODY);
   let lineSpacing = bodySize * TEXT_SCALE.LINE_HEIGHT;
 
   textSize(bodySize);
-  let startY = height * 0.64;
+  let startY = height * 0.22;
   text('A-Z to make shapes / Spacebar for speed.'.toUpperCase(), width / 2, startY);
   text('Score points and go wild!'.toUpperCase(), width / 2, startY + lineSpacing);
   text('** STROBE CAUTION - THINGS CAN GET A BIT INTENSE! **'.toUpperCase(), width / 2, startY + lineSpacing * TEXT_SCALE.PARAGRAPH_GAP);
@@ -300,18 +300,18 @@ function displayMakeShapeFirstMessage() {
 
   // Calculate fade based on time elapsed
   let elapsed = millis() - makeShapeMessageTime;
-  let fadeStart = 2500 * MESSAGE_FADE_START_PERCENT;
+  let fadeStart = 3000 * MESSAGE_FADE_START_PERCENT;
   let alpha = 255;
 
   if (elapsed > fadeStart) {
     // Fade from 255 to 0 over the remaining time with easing
-    let t = map(elapsed, fadeStart, 2500, 0, 1); // Normalize to 0-1
+    let t = map(elapsed, fadeStart, 3000, 0, 1); // Normalize to 0-1
     let easedT = t * t; // Quadratic ease-in (accelerating fade)
     alpha = map(easedT, 0, 1, 255, 0);
   }
 
   fill(255, alpha);
-  text('Make a shape first with any key A-Z.'.toUpperCase(), width / 2, height * 0.33);
+  text('Spacebar is for speed, make a shape first with A-Z keys!'.toUpperCase(), width / 2, height * 0.65);
   pop();
 }
 
@@ -339,7 +339,7 @@ function keyPressed() {
     lastKeyTime.line = millis();
 
     if (shapes.length === 0) {
-      soundManager.playErrorSound();
+      //soundManager.playErrorSound();
       displayMakeShapeFirst = true;
       makeShapeMessageTime = millis();
     } else {

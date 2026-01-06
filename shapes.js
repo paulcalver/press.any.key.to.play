@@ -17,7 +17,7 @@ const WARNING_OSCILLATION_DECAY = 0.99; // Slower decay for lines during warning
 const WARNING_PULSE_SPEED = 0.9; // Speed of the warning pulse animation
 
 // Death animation constants
-const DEATH_ENERGY_LOSS_PHASE = 0; // Frames for energy loss phase
+const DEATH_ENERGY_LOSS_PHASE = 30; // Frames for energy loss phase
 const DEATH_ENERGY_DECAY = 0.92;
 const DEATH_OSCILLATION_DECAY = 0.95;
 const DEATH_GRAVITY_START = 0.4;
