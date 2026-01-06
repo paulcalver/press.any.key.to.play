@@ -221,9 +221,12 @@ function displayStartMessage() {
   textAlign(CENTER, CENTER);
   textSize(width * 0.025); // 3% of width
   fill(255);
-  text('Press any key A-Z to make shapes and spacebar for speed.\nScore points and go wild!'.toUpperCase(), width / 2, height * 0.28);
+  text('Press any key A-Z to make shapes\nSpacebar for speed.'.toUpperCase(), width / 2, height * 0.28);
+  text('Score points and go wild!'.toUpperCase(), width / 2, height * 0.64);
+  
+
   textSize(width * 0.01);
-  text('** STROBE CAUTION - THINGS CAN GET A BIT INTENSE! **'.toUpperCase(), width / 2, height * 0.65);
+  text('** STROBE CAUTION - THINGS CAN GET A BIT INTENSE! **'.toUpperCase(), width / 2, height * 0.7);
   pop();
 }
 
@@ -231,7 +234,7 @@ function displayMakeShapeFirstMessage() {
   push();
   blendMode(DIFFERENCE);
   textAlign(CENTER, CENTER);
-  textSize(width * 0.025); // 1.5% of width
+  textSize(width * 0.01);
 
   // Calculate fade based on time elapsed
   let elapsed = millis() - makeShapeMessageTime;
