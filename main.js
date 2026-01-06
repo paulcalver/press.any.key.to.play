@@ -7,7 +7,7 @@ let lastKeyTime = {
   line: 0
 };
 
-let keyTimeout = 3000; // 3 seconds before shapes start dying
+let keyTimeout = 4000; // 6 seconds before shapes start dying
 let hasStarted = false; // Track if user has pressed any key
 let displayMakeShapeFirst = false; // Track if "make shape first" message should be displayed
 let makeShapeMessageTime = 0; // Track when the "make shape first" message was triggered
@@ -28,8 +28,8 @@ const keyMap = {
   'y': 'line-v', 'u': 'line-h', 'i': 'line-v', 'o': 'line-h', 'p': 'line-v',
 
   // Middle row - Mixed
-  'a': 'line-h', 's': 'line-v', 'd': 'circle', 'f': 'line-h', 'g': 'line-v',
-  'h': 'circle', 'j': 'line-h', 'k': 'line-v', 'l': 'circle',
+  'a': 'line-h', 's': 'circle', 'd': 'circle', 'f': 'circle', 'g': 'circle',
+  'h': 'line-v', 'j': 'line-h', 'k': 'line-v', 'l': 'line-h',
 
   // Bottom row - Circles
   'z': 'circle', 'x': 'circle', 'c': 'circle', 'v': 'circle',
@@ -47,8 +47,8 @@ function setup() {
   // Random background from specified colors
   const bgColors = [
     '#fffc79', // Yellow
-    '#66386a', // Purple
-    '#ef4026'  // Red-orange
+    //'#ef4026',  // Red-orange
+    '#4a294eff' // Purple
   ];
   bgColor = color(random(bgColors));
 
@@ -84,7 +84,19 @@ function setup() {
 }
 
 function draw() {
-  background(bgColor);
+  // Calculate desaturation based on score (25k-50k range)
+  let desaturation = map(score, 25000, 50000, 1, 0, true);
+
+  // Calculate brightness reduction based on score (30k-50k range)
+  let brightnessMultiplier = map(score, 40000, 100000, 1, 0, true);
+
+  // Apply desaturation to background
+  let desaturatedBg = color(
+    hue(bgColor),
+    saturation(bgColor) * desaturation,
+    brightness(bgColor)
+  );
+  background(desaturatedBg);
 
   let currentTime = millis();
 
@@ -108,7 +120,7 @@ function draw() {
   noStroke();
   for (let shape of shapes) {
     shape.update();
-    shape.displayWithWrap();
+    shape.displayWithWrap(desaturation, brightnessMultiplier);
   }
 
   // Remove shapes that fell off screen
@@ -223,10 +235,11 @@ function displayStartMessage() {
   push();
   blendMode(DIFFERENCE);
   textAlign(CENTER, CENTER);
-  textSize(width * 0.015); // 1.5% of width
+  textSize(width * 0.025); // 3% of width
   fill(255);
-  text('Press any key A-Z for shapes and spacebar for speed.\n\nScore points and go wild!', width / 2, height * 0.2);
-  //text('Score points and go wild!', width / 2, height * 0.75);
+  text('Press any key A-Z to make shapes and spacebar for speed.\nScore points and go wild!'.toUpperCase(), width / 2, height * 0.28);
+  textSize(width * 0.01); 
+  text('** STROBE CAUTION - THINGS CAN GET A BIT INTENSE! **'.toUpperCase(), width / 2, height * 0.65);
   pop();
 }
 
@@ -234,7 +247,7 @@ function displayMakeShapeFirstMessage() {
   push();
   blendMode(DIFFERENCE);
   textAlign(CENTER, CENTER);
-  textSize(width * 0.015); // 1.5% of width
+  textSize(width * 0.025); // 1.5% of width
 
   // Calculate fade based on time elapsed
   let elapsed = millis() - makeShapeMessageTime;
@@ -249,7 +262,7 @@ function displayMakeShapeFirstMessage() {
   }
 
   fill(255, alpha);
-  text('Make a shape first with any key A-Z, spacebar is for speed.', width / 2, height * 0.75);
+  text('Make a shape first with any key A-Z.'.toUpperCase(), width / 2, height * 0.75);
   pop();
 }
 
@@ -424,8 +437,8 @@ function drawFullscreenButton() {
 function changeBGAndInvertShapes() {
   const bgColors = [
     '#fffc79', // Yellow
-    '#66386a', // Purple
-    '#ef4026'  // Red-orange
+    //'#ef4026',  // Red-orange
+    '#4a294eff' // Purple
   ];
 
   // Find current background and switch to next

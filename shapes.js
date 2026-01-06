@@ -49,44 +49,44 @@ class Shape {
     else if (this.position.y < 0) this.position.y = height;
   }
 
-  display() {
+  display(desaturation = 1, brightnessMultiplier = 1) {
     // To be implemented by subclasses
   }
 
-  displayWithWrap() {
+  displayWithWrap(desaturation = 1, brightnessMultiplier = 1) {
     // Don't wrap display if dying
     if (this.isDying) {
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       return;
     }
-    
+
     let size = this.getSize ? this.getSize() : 100;
 
     // Draw main shape
-    this.display();
+    this.display(desaturation, brightnessMultiplier);
 
     // Draw wrapped versions when near edges
     if (this.position.x - size < 0) {
       push();
       translate(width, 0);
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       pop();
     } else if (this.position.x + size > width) {
       push();
       translate(-width, 0);
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       pop();
     }
 
     if (this.position.y - size < 0) {
       push();
       translate(0, height);
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       pop();
     } else if (this.position.y + size > height) {
       push();
       translate(0, -height);
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       pop();
     }
 
@@ -97,7 +97,7 @@ class Shape {
       let yOffset = this.position.y - size < 0 ? height : -height;
       push();
       translate(xOffset, yOffset);
-      this.display();
+      this.display(desaturation, brightnessMultiplier);
       pop();
     }
   }
@@ -130,9 +130,18 @@ class Circle extends Shape {
     super.update();
   }
 
-  display() {
-    fill(this.color);
+  display(desaturation = 1, brightnessMultiplier = 1) {
+    push();
+    blendMode(DIFFERENCE);
+    // Apply desaturation and brightness reduction to color
+    let desaturatedColor = color(
+      hue(this.color),
+      saturation(this.color) * desaturation,
+      brightness(this.color) * brightnessMultiplier
+    );
+    fill(desaturatedColor);
     ellipse(this.position.x, this.position.y, this.radius * 2);
+    pop();
   }
 }
 
@@ -184,9 +193,16 @@ class Line extends Shape {
     // Don't call super.update() - lines don't use velocity-based movement
   }
 
-  display() {
+  display(desaturation = 1, brightnessMultiplier = 1) {
     push();
-    stroke(this.color);
+    blendMode(DIFFERENCE);
+    // Apply desaturation and brightness reduction to color
+    let desaturatedColor = color(
+      hue(this.color),
+      saturation(this.color) * desaturation,
+      brightness(this.color) * brightnessMultiplier
+    );
+    stroke(desaturatedColor);
     strokeWeight(this.strokeWeight);
     noFill();
 
@@ -215,7 +231,7 @@ class Line extends Shape {
     pop();
   }
 
-  displayWithWrap() {
-    this.display();
+  displayWithWrap(desaturation = 1, brightnessMultiplier = 1) {
+    this.display(desaturation, brightnessMultiplier);
   }
 }
