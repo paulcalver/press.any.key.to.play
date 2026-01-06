@@ -3,6 +3,11 @@ const SHAPE_MAX_SPEED = 8;
 const SHAPE_SATURATION = 100;
 const SHAPE_BRIGHTNESS = 100;
 
+// Warning phase constants
+const WARNING_ENERGY_DECAY = 0.985; // Slower decay during warning (more gradual)
+const WARNING_OSCILLATION_DECAY = 0.99; // Slower decay for lines during warning
+const WARNING_PULSE_SPEED = 0.9; // Speed of the warning pulse animation
+
 // Death animation constants
 const DEATH_ENERGY_LOSS_PHASE = 60; // Frames for energy loss phase
 const DEATH_ENERGY_DECAY = 0.92;
@@ -21,7 +26,14 @@ class Shape {
     this.acceleration = createVector(0, 0);
     this.speed = 0;
     this.maxSpeed = SHAPE_MAX_SPEED;
+    this.isWarning = false;
     this.isDying = false;
+    this.warningPulse = 0; // Timer for warning pulse animation
+
+    // Store original values for recovery
+    this.originalSpeed = 0;
+    this.originalAmplitude = 0;
+    this.originalOscillationSpeed = 0;
 
     this.color = color(random(360), SHAPE_SATURATION, SHAPE_BRIGHTNESS);
   }
@@ -64,9 +76,42 @@ class Shape {
     else if (this.position.y < 0) this.position.y = height;
   }
 
+  startWarning() {
+    if (!this.isWarning && !this.isDying) {
+      this.isWarning = true;
+      // Store current values as "original" for potential recovery
+      this.originalSpeed = this.speed;
+    }
+  }
+
+  recoverFromWarning() {
+    if (this.isWarning && !this.isDying) {
+      this.isWarning = false;
+      this.warningPulse = 0; // Reset pulse animation
+      // Restore to original speed (or boost slightly for recovery)
+      if (this.originalSpeed > 0) {
+        this.setSpeed(this.originalSpeed);
+      }
+    }
+  }
+
+  updateWarning() {
+    if (!this.isWarning) return;
+    // Apply gradual energy loss during warning
+    this.applyWarningDecay();
+    // Update pulse animation
+    this.warningPulse += WARNING_PULSE_SPEED;
+  }
+
+  getWarningAlpha() {
+    // Create a pulsing alpha value using sine wave (0.3 to 1.0)
+    return map(sin(this.warningPulse), -1, 1, 0.3, 1.0);
+  }
+
   startDying() {
     if (!this.isDying) {
       this.isDying = true;
+      this.isWarning = false; // Exit warning state
       this.deathTimer = 0;
       this.fallVelocity = 0;
     }
@@ -90,6 +135,12 @@ class Shape {
     }
 
     return this.deathTimer === DEATH_ENERGY_LOSS_PHASE; // Return true when gravity starts (for sound trigger)
+  }
+
+  applyWarningDecay() {
+    // Default implementation for circles - gradual slowdown
+    if (this.velocity) this.velocity.mult(WARNING_ENERGY_DECAY);
+    this.speed *= WARNING_ENERGY_DECAY;
   }
 
   applyEnergyLoss() {
@@ -171,6 +222,18 @@ class Circle extends Shape {
     }
   }
 
+  recoverFromWarning() {
+    if (this.isWarning && !this.isDying) {
+      this.isWarning = false;
+      this.warningPulse = 0; // Reset pulse animation
+      // Restore to original speed
+      if (this.originalSpeed > 0) {
+        this.speed = this.originalSpeed;
+        this.velocity.setMag(this.originalSpeed);
+      }
+    }
+  }
+
   getSize() {
     return this.radius;
   }
@@ -195,6 +258,13 @@ class Circle extends Shape {
       saturation(this.color) * desaturation,
       brightness(this.color) * brightnessMultiplier
     );
+
+    // Apply warning pulse if in warning state
+    if (this.isWarning) {
+      let alpha = this.getWarningAlpha();
+      desaturatedColor.setAlpha(alpha * 255);
+    }
+
     fill(desaturatedColor);
     ellipse(this.position.x, this.position.y, this.radius * 2);
     pop();
@@ -221,6 +291,29 @@ class Line extends Shape {
     this.driftSpeed = random(0.3, 0.8);
     this.driftDirection = random(1) > 0.5 ? 1 : -1;
     this.points = LINE_POINTS;
+  }
+
+  startWarning() {
+    if (!this.isWarning && !this.isDying) {
+      this.isWarning = true;
+      // Store original values for lines
+      this.originalAmplitude = this.amplitude;
+      this.originalOscillationSpeed = this.oscillationSpeed;
+    }
+  }
+
+  recoverFromWarning() {
+    if (this.isWarning && !this.isDying) {
+      this.isWarning = false;
+      this.warningPulse = 0; // Reset pulse animation
+      // Restore original values
+      if (this.originalAmplitude > 0) {
+        this.amplitude = this.originalAmplitude;
+      }
+      if (this.originalOscillationSpeed > 0) {
+        this.oscillationSpeed = this.originalOscillationSpeed;
+      }
+    }
   }
 
   setSpeed(speed) {
@@ -250,6 +343,12 @@ class Line extends Shape {
     // Don't call super.update() - lines don't use velocity-based movement
   }
 
+  applyWarningDecay() {
+    // Lines gradually lose amplitude and oscillation speed during warning
+    this.amplitude *= WARNING_ENERGY_DECAY;
+    this.oscillationSpeed *= WARNING_OSCILLATION_DECAY;
+  }
+
   applyEnergyLoss() {
     // Lines lose amplitude and oscillation speed
     this.amplitude *= DEATH_ENERGY_DECAY;
@@ -270,6 +369,13 @@ class Line extends Shape {
       saturation(this.color) * desaturation,
       brightness(this.color) * brightnessMultiplier
     );
+
+    // Apply warning pulse if in warning state
+    if (this.isWarning) {
+      let alpha = this.getWarningAlpha();
+      desaturatedColor.setAlpha(alpha * 255);
+    }
+
     stroke(desaturatedColor);
     strokeWeight(this.strokeWeight);
     noFill();

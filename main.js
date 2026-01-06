@@ -1,5 +1,6 @@
 // Configuration constants
-const KEY_TIMEOUT = 6000; // Milliseconds before shapes start dying
+const KEY_TIMEOUT = 6000; // Milliseconds before shapes enter warning phase
+const WARNING_DURATION = 4000; // Milliseconds of warning before death (grace period)
 const DEATH_DROP_SOUND_FRAME = 60; // Frame when drop sound plays
 const OFFSCREEN_THRESHOLD = 200; // Pixels beyond screen edge before removal
 
@@ -97,7 +98,7 @@ function draw() {
 
   let currentTime = millis();
 
-  // Apply death animation based on shape type inactivity
+  // Apply warning and death animations based on shape type inactivity
   for (let shape of shapes) {
     // Once dying, always continue dying - can't be saved
     if (shape.isDying) {
@@ -113,8 +114,23 @@ function draw() {
     let shapeType = shape instanceof Line ? 'line' : 'circle';
     let timeSinceKey = currentTime - lastKeyTime[shapeType];
 
-    if (timeSinceKey > keyTimeout) {
+    // Warning phase: shapes lose energy gradually (reversible)
+    if (timeSinceKey > keyTimeout && timeSinceKey <= keyTimeout + WARNING_DURATION) {
+      if (!shape.isWarning) {
+        shape.startWarning();
+        scoreNeedsUpdate = true; // Score changes when entering warning
+      }
+      shape.updateWarning();
+      scoreNeedsUpdate = true; // Score continuously updates as speed decreases
+    }
+    // Death phase: warning period expired, now dying (irreversible)
+    else if (timeSinceKey > keyTimeout + WARNING_DURATION) {
       shape.startDying();
+    }
+    // Active phase: reset warning if player pressed key in time
+    else if (shape.isWarning) {
+      shape.recoverFromWarning();
+      scoreNeedsUpdate = true; // Score changes when recovering
     }
   }
 
