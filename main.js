@@ -1,3 +1,27 @@
+// Paul Calver, January 2026, Author - Paul Calver
+// Press any key to play!
+// Playful yet demanding system that encourages keyboard interaction and discovery and rewards consistency.
+
+// Sketch has 3 main states for shapes: Active, Warning, Dying
+// Active: shapes behave normally
+// Warning: shapes lose energy gradually (reversible)
+// Dying: shapes fall off screen (irreversible)
+
+// User can create circles and lines with different keys, and speed them up with spacebar
+// Score is calculated based on number of shapes and their speeds
+// Background color can be cycled with mouse click, inverting shape colors for contrast
+
+// Additional features:
+// - Sound effects for different actions
+// - Fullscreen toggle button
+// - Visual desaturation and brightness reduction as score increases
+// - Warning and death animations for shapes
+
+// Overall goal:
+// Create an engaging, dynamic experience that encourages keyboard exploration and consistent interaction.
+// Visuals get more intense as user plays, eventually leading to a strobe-like effect and then a blank screen, yet score remains visible and attainable.
+
+
 // Configuration constants
 const KEY_TIMEOUT = 6000; // Milliseconds before shapes enter warning phase
 const WARNING_DURATION = 4000; // Milliseconds of warning before death (grace period)
@@ -23,6 +47,7 @@ const SOUND_ATTACK_TIME = 0.01;
 const SOUND_RELEASE_TIME = 0.1;
 const SOUND_VOLUME = 0.3;
 
+// Global variables
 let shapes = [];
 let bgColor;
 let score = 0;
@@ -302,6 +327,8 @@ function keyPressed() {
 
   return false;
 }
+
+// Lots of mini functions to keep things tidy:
 
 function createCircle() {
   let circle = new Circle(

@@ -1,3 +1,11 @@
+// Shape Classes for Circles and Lines with warning and death animations
+
+// Overall structure:
+// - Shape (base class) Handles common properties and methods
+//   - Circle (subclass) Handles circle-specific properties and methods
+//   - Line (subclass) Handles line-specific properties and methods
+
+
 // Shape constants
 const SHAPE_MAX_SPEED = 8;
 const SHAPE_SATURATION = 100;

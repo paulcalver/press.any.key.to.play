@@ -1,5 +1,11 @@
 // Sound Manager - handles all audio synthesis and playback
 
+// Retro-inspired sound effects using p5.js sound library
+// Different synthesizers for different shape interactions
+// Sounds include: circle creation, line creation, speed boost, drop, error/warning
+// I'd love to make the sounds richer but keeping it simple for now.
+
+
 class SoundManager {
   constructor() {
     this.synths = {};
