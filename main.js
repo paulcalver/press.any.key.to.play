@@ -7,7 +7,7 @@ let lastKeyTime = {
   line: 0
 };
 
-let keyTimeout = 4000; // 6 seconds before shapes start dying
+let keyTimeout = 6000; // 6 seconds before shapes start dying
 let hasStarted = false; // Track if user has pressed any key
 let displayMakeShapeFirst = false; // Track if "make shape first" message should be displayed
 let makeShapeMessageTime = 0; // Track when the "make shape first" message was triggered
@@ -24,16 +24,16 @@ let synthAngry;
 // Keyboard mapping
 const keyMap = {
   // Top row - Lines (alternating H/V)
-  'q': 'line-h', 'w': 'line-v', 'e': 'line-h', 'r': 'line-v', 't': 'line-h',
-  'y': 'line-v', 'u': 'line-h', 'i': 'line-v', 'o': 'line-h', 'p': 'line-v',
+  'q': 'line-random', 'w': 'circle', 'e': 'line-random', 'r': 'circle', 't': 'line-random',
+  'y': 'circle', 'u': 'line-random', 'i': 'circle', 'o': 'line-random', 'p': 'circle',
 
   // Middle row - Mixed
-  'a': 'line-h', 's': 'circle', 'd': 'circle', 'f': 'circle', 'g': 'circle',
-  'h': 'line-v', 'j': 'line-h', 'k': 'line-v', 'l': 'line-h',
+  'a': 'line-random', 's': 'circle', 'd': 'line-random', 'f': 'circle', 'g': 'line-random',
+  'h': 'circle', 'j': 'line-random', 'k': 'circle', 'l': 'line-random',
 
   // Bottom row - Circles
-  'z': 'circle', 'x': 'circle', 'c': 'circle', 'v': 'circle',
-  'b': 'circle', 'n': 'circle', 'm': 'circle',
+  'z': 'circle', 'x': 'line-random', 'c': 'circle', 'v': 'line-random',
+  'b': 'circle', 'n': 'line-random', 'm': 'circle',
 
   // Spacebar - Speed up all shapes
   ' ': 'speed',
@@ -47,7 +47,6 @@ function setup() {
   // Random background from specified colors
   const bgColors = [
     '#fffc79', // Yellow
-    //'#ef4026',  // Red-orange
     '#4a294eff' // Purple
   ];
   bgColor = color(random(bgColors));
@@ -238,7 +237,7 @@ function displayStartMessage() {
   textSize(width * 0.025); // 3% of width
   fill(255);
   text('Press any key A-Z to make shapes and spacebar for speed.\nScore points and go wild!'.toUpperCase(), width / 2, height * 0.28);
-  textSize(width * 0.01); 
+  textSize(width * 0.01);
   text('** STROBE CAUTION - THINGS CAN GET A BIT INTENSE! **'.toUpperCase(), width / 2, height * 0.65);
   pop();
 }
@@ -316,19 +315,9 @@ function keyPressed() {
     displayMakeShapeFirst = false;
   } else if (action === 'bgChange') {
     changeBGAndInvertShapes();
-  } else if (action === 'line-h' || action === 'line-v') {
+  } else if (action === 'line-random') {
     lastKeyTime.line = millis();
-    if (action === 'line-h') {
-      createHorizontalLine();
-      playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
-      hasStarted = true;
-      displayMakeShapeFirst = false;
-    } else {
-      createVerticalLine();
-      playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
-      hasStarted = true;
-      displayMakeShapeFirst = false;
-    }
+    randomLine()
   } else if (action === 'speed') {
     lastKeyTime.circle = millis();
     lastKeyTime.line = millis();
@@ -386,6 +375,20 @@ function createVerticalLine() {
   shapes.push(new Line(random(50, 200), random(0.3, 0.8), false));
 }
 
+function randomLine() {
+  if (random() < 0.5) {
+    createHorizontalLine();
+    playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
+    hasStarted = true;
+    displayMakeShapeFirst = false;
+  } else {
+    createVerticalLine();
+    playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
+    hasStarted = true;
+    displayMakeShapeFirst = false;
+  }
+}
+
 function speedUp() {
   for (let shape of shapes) {
     // Skip dying shapes - don't add speed to them
@@ -437,7 +440,6 @@ function drawFullscreenButton() {
 function changeBGAndInvertShapes() {
   const bgColors = [
     '#fffc79', // Yellow
-    //'#ef4026',  // Red-orange
     '#4a294eff' // Purple
   ];
 
@@ -482,9 +484,6 @@ function mousePressed() {
 
     return false;
   }
-
-
-
   // Otherwise, cycle background color and invert shapes
   changeBGAndInvertShapes();
   return false;
