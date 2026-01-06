@@ -1,25 +1,45 @@
+// Configuration constants
+const KEY_TIMEOUT = 6000; // Milliseconds before shapes start dying
+const DEATH_DROP_SOUND_FRAME = 60; // Frame when drop sound plays
+const OFFSCREEN_THRESHOLD = 200; // Pixels beyond screen edge before removal
+
+// Score calculation constants
+const SCORE_SHAPE_MULTIPLIER = 10;
+const SCORE_SPEED_MULTIPLIER = 5;
+const LINE_SPEED_SCALE = 100; // Scale line oscillation speed for scoring
+
+// Visual transition constants
+const DESATURATION_START = 25000;
+const DESATURATION_END = 50000;
+const BRIGHTNESS_START = 40000;
+const BRIGHTNESS_END = 100000;
+
+// Message timing constants
+const MESSAGE_FADE_START_PERCENT = 0.6; // When to start fading the message (60% of timeout)
+
+// Audio constants
+const SOUND_ATTACK_TIME = 0.01;
+const SOUND_RELEASE_TIME = 0.1;
+const SOUND_VOLUME = 0.3;
+
 let shapes = [];
 let bgColor;
 let score = 0;
+let scoreNeedsUpdate = true; // Flag to track when score needs recalculation
 
 let lastKeyTime = {
   circle: 0,
   line: 0
 };
 
-let keyTimeout = 6000; // 6 seconds before shapes start dying
+let keyTimeout = KEY_TIMEOUT;
 let hasStarted = false; // Track if user has pressed any key
 let displayMakeShapeFirst = false; // Track if "make shape first" message should be displayed
 let makeShapeMessageTime = 0; // Track when the "make shape first" message was triggered
 let isFullscreen = false; // Track fullscreen state
 
-// Sound synths
-let synthCircle;
-let synthLineH;
-let synthLineV;
-let synthSpeed;
-let synthDrop;
-let synthAngry;
+// Sound manager
+let soundManager;
 
 // Keyboard mapping
 const keyMap = {
@@ -55,39 +75,17 @@ function setup() {
   lastKeyTime.circle = currentTime;
   lastKeyTime.line = currentTime;
 
-  // Initialize synthesizers
-  synthCircle = new p5.Oscillator('sine');
-  synthCircle.amp(0);
-  synthCircle.start();
-
-  synthLineH = new p5.Oscillator('triangle');
-  synthLineH.amp(0);
-  synthLineH.start();
-
-  synthLineV = new p5.Oscillator('triangle');
-  synthLineV.amp(0);
-  synthLineV.start();
-
-  synthSpeed = new p5.Oscillator('square');
-  synthSpeed.amp(0);
-  synthSpeed.start();
-
-  synthDrop = new p5.Oscillator('sine');
-  synthDrop.amp(0);
-  synthDrop.start();
-
-  synthAngry = new p5.Oscillator('sawtooth');
-  synthAngry.amp(0);
-  synthAngry.start();
-
+  // Initialize sound manager
+  soundManager = new SoundManager();
+  soundManager.initialize();
 }
 
 function draw() {
-  // Calculate desaturation based on score (25k-50k range)
-  let desaturation = map(score, 25000, 50000, 1, 0, true);
+  // Calculate desaturation based on score
+  let desaturation = map(score, DESATURATION_START, DESATURATION_END, 1, 0, true);
 
-  // Calculate brightness reduction based on score (30k-50k range)
-  let brightnessMultiplier = map(score, 40000, 100000, 1, 0, true);
+  // Calculate brightness reduction based on score
+  let brightnessMultiplier = map(score, BRIGHTNESS_START, BRIGHTNESS_END, 1, 0, true);
 
   // Apply desaturation to background
   let desaturatedBg = color(
@@ -103,7 +101,12 @@ function draw() {
   for (let shape of shapes) {
     // Once dying, always continue dying - can't be saved
     if (shape.isDying) {
-      applyDeathAnimation(shape);
+      let shouldPlaySound = shape.updateDeathAnimation();
+      if (shouldPlaySound) {
+        // Play drop sound when gravity kicks in
+        let xPos = shape.position ? shape.position.x : width / 2;
+        soundManager.playDropSound(xPos);
+      }
       continue;
     }
 
@@ -111,7 +114,7 @@ function draw() {
     let timeSinceKey = currentTime - lastKeyTime[shapeType];
 
     if (timeSinceKey > keyTimeout) {
-      applyDeathAnimation(shape);
+      shape.startDying();
     }
   }
 
@@ -126,10 +129,16 @@ function draw() {
   for (let i = shapes.length - 1; i >= 0; i--) {
     if (isOffScreen(shapes[i])) {
       shapes.splice(i, 1);
+      scoreNeedsUpdate = true; // Mark score for update when shape is removed
     }
   }
 
-  updateScore();
+  // Only recalculate score when needed
+  if (scoreNeedsUpdate) {
+    updateScore();
+    scoreNeedsUpdate = false;
+  }
+
   displayScore();
 
   // Show start message if user hasn't started yet
@@ -150,51 +159,11 @@ function draw() {
   drawFullscreenButton();
 }
 
-function applyDeathAnimation(shape) {
-  if (!shape.isDying) {
-    shape.isDying = true;
-    shape.deathTimer = 0;
-    shape.fallVelocity = 0;
-  }
-
-  shape.deathTimer++;
-
-  // Phase 1 (0-60 frames): Lose energy/amplitude
-  if (shape.deathTimer < 60) {
-    if (shape instanceof Line) {
-      shape.amplitude *= 0.92;
-      shape.oscillationSpeed *= 0.95;
-    } else {
-      if (shape.velocity) shape.velocity.mult(0.92);
-      shape.speed *= 0.92;
-    }
-  }
-
-  // Phase 2 (60+ frames): Gravity - fall off screen with increasing acceleration
-  if (shape.deathTimer === 60) {
-    // Play drop sound once when gravity kicks in
-    let dropFreq = map(shape.position ? shape.position.x : width / 2, 0, width, 100, 300);
-    playSound(synthDrop, dropFreq, 0.3);
-  }
-
-  if (shape.deathTimer >= 60) {
-    // Gravity increases over time - starts at 0.4, increases by 0.05 every frame
-    let gravityAccel = 0.4 + (shape.deathTimer - 60) * 0.05;
-    shape.fallVelocity += gravityAccel;
-
-    if (shape instanceof Line) {
-      shape.verticalOffset += shape.fallVelocity;
-    } else {
-      shape.position.y += shape.fallVelocity;
-    }
-  }
-}
-
 function isOffScreen(shape) {
   if (shape instanceof Line) {
-    return shape.verticalOffset > height + 200;
+    return shape.verticalOffset > height + OFFSCREEN_THRESHOLD;
   }
-  return shape.position && shape.position.y > height + 200;
+  return shape.position && shape.position.y > height + OFFSCREEN_THRESHOLD;
 }
 
 function updateScore() {
@@ -210,14 +179,14 @@ function updateScore() {
   for (let shape of shapes) {
     if (shape instanceof Line) {
       // Lines use oscillationSpeed
-      totalSpeed += shape.oscillationSpeed * 100;
+      totalSpeed += shape.oscillationSpeed * LINE_SPEED_SCALE;
     } else if (shape.speed !== undefined) {
       // Circles use speed
       totalSpeed += shape.speed;
     }
   }
 
-  score = Math.floor(shapes.length * 10 + totalSpeed * 5);
+  score = Math.floor(shapes.length * SCORE_SHAPE_MULTIPLIER + totalSpeed * SCORE_SPEED_MULTIPLIER);
 }
 
 function displayScore() {
@@ -250,7 +219,7 @@ function displayMakeShapeFirstMessage() {
 
   // Calculate fade based on time elapsed
   let elapsed = millis() - makeShapeMessageTime;
-  let fadeStart = keyTimeout * 0.6; // Start fading at 60% of timeout (1.8s)
+  let fadeStart = keyTimeout * MESSAGE_FADE_START_PERCENT;
   let alpha = 255;
 
   if (elapsed > fadeStart) {
@@ -265,52 +234,18 @@ function displayMakeShapeFirstMessage() {
   pop();
 }
 
-// Play synthesized sounds
-function playSound(synth, freq, duration = 0.1) {
-  synth.freq(freq);
-  synth.amp(0.3, 0.01); // Quick attack
-  setTimeout(() => {
-    synth.amp(0, 0.1); // Fade out
-  }, duration * 1000);
-}
-
-// Play neutral notification sound (soft pulse)
-function PlayErrorSound() {
-  let baseFreq = 300; // Mid-range, neutral tone
-
-  // Create a gentle two-note pulse
-  synthAngry.freq(baseFreq);
-  synthAngry.amp(0.25, 0.02); // Softer attack
-
-  // Second pulse slightly lower
-  setTimeout(() => {
-    synthAngry.freq(baseFreq * 0.9); // Slightly lower second note
-  }, 100);
-
-  // Fade out
-  setTimeout(() => {
-    synthAngry.amp(0, 0.1);
-  }, 200);
-}
-
 function keyPressed() {
   let key_lower = key.toLowerCase();
   if (!keyMap[key_lower]) return;
 
-  // Resume audio context on first interaction (fixes browser audio policy)
-  if (getAudioContext().state !== 'running') {
-    getAudioContext().resume();
-  }
-
-  // Mark as started on first key press
-  //hasStarted = true;
+  soundManager.ensureAudioContext();
 
   let action = keyMap[key_lower];
 
   if (action === 'circle') {
     lastKeyTime.circle = millis();
     createCircle();
-    playSound(synthCircle, random(400, 800), 0.15); // Bubble-like
+    soundManager.playCircleSound();
     hasStarted = true;
     displayMakeShapeFirst = false;
   } else if (action === 'bgChange') {
@@ -323,11 +258,9 @@ function keyPressed() {
     lastKeyTime.line = millis();
 
     if (shapes.length === 0) {
-
-      PlayErrorSound();
+      soundManager.playErrorSound();
       displayMakeShapeFirst = true;
-      makeShapeMessageTime = millis(); // Record when message was triggered
-
+      makeShapeMessageTime = millis();
     } else {
       speedUp();
 
@@ -336,7 +269,7 @@ function keyPressed() {
       let speedCount = 0;
       for (let shape of shapes) {
         if (shape instanceof Line) {
-          totalSpeed += shape.oscillationSpeed * 100;
+          totalSpeed += shape.oscillationSpeed * LINE_SPEED_SCALE;
           speedCount++;
         } else if (shape.speed !== undefined) {
           totalSpeed += shape.speed;
@@ -344,10 +277,7 @@ function keyPressed() {
         }
       }
       let avgSpeed = speedCount > 0 ? totalSpeed / speedCount : 0;
-
-      // Map average speed to frequency (600-2000 Hz, gets higher as speed increases)
-      let speedFreq = map(avgSpeed, 0, 50, 100, 2000, true);
-      playSound(synthSpeed, speedFreq, 0.05);
+      soundManager.playSpeedSound(avgSpeed);
     }
   }
 
@@ -365,25 +295,28 @@ function createCircle() {
   );
   circle.setSpeed(random(2, 5));
   shapes.push(circle);
+  scoreNeedsUpdate = true;
 }
 
 function createHorizontalLine() {
   shapes.push(new Line(random(50, 200), random(0.3, 0.8), true));
+  scoreNeedsUpdate = true;
 }
 
 function createVerticalLine() {
   shapes.push(new Line(random(50, 200), random(0.3, 0.8), false));
+  scoreNeedsUpdate = true;
 }
 
 function randomLine() {
   if (random() < 0.5) {
     createHorizontalLine();
-    playSound(synthLineH, random(100, 200), 0.2); // Lower swoosh
+    soundManager.playLineHSound();
     hasStarted = true;
     displayMakeShapeFirst = false;
   } else {
     createVerticalLine();
-    playSound(synthLineV, random(200, 400), 0.2); // Higher swoosh
+    soundManager.playLineVSound();
     hasStarted = true;
     displayMakeShapeFirst = false;
   }
@@ -398,6 +331,7 @@ function speedUp() {
 
     shape.addSpeed(2);
   }
+  scoreNeedsUpdate = true; // Speed affects score
 }
 
 function windowResized() {
@@ -461,8 +395,6 @@ function changeBGAndInvertShapes() {
       shape.color = color(newHue, s, b);
     }
   }
-
-  //return false;
 }
 
 function mousePressed() {

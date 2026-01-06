@@ -1,14 +1,29 @@
+// Shape constants
+const SHAPE_MAX_SPEED = 8;
+const SHAPE_SATURATION = 100;
+const SHAPE_BRIGHTNESS = 100;
+
+// Death animation constants
+const DEATH_ENERGY_LOSS_PHASE = 60; // Frames for energy loss phase
+const DEATH_ENERGY_DECAY = 0.92;
+const DEATH_OSCILLATION_DECAY = 0.95;
+const DEATH_GRAVITY_START = 0.4;
+const DEATH_GRAVITY_INCREASE = 0.05;
+
+// Line constants
+const LINE_POINTS = 200;
+const LINE_EXTENSION = 100;
+
 class Shape {
   constructor(x, y) {
     this.position = createVector(x, y);
     this.velocity = createVector(0, 0);
     this.acceleration = createVector(0, 0);
     this.speed = 0;
-    this.maxSpeed = 8;
+    this.maxSpeed = SHAPE_MAX_SPEED;
     this.isDying = false;
-    
-    colorMode(HSB, 360, 100, 100, 255);
-    this.color = color(random(360), 100, 100);
+
+    this.color = color(random(360), SHAPE_SATURATION, SHAPE_BRIGHTNESS);
   }
 
   setSpeed(speed) {
@@ -41,12 +56,53 @@ class Shape {
   edges() {
     // Don't wrap if dying - allow to fall off screen
     if (this.isDying) return;
-    
+
     if (this.position.x > width) this.position.x = 0;
     else if (this.position.x < 0) this.position.x = width;
 
     if (this.position.y > height) this.position.y = 0;
     else if (this.position.y < 0) this.position.y = height;
+  }
+
+  startDying() {
+    if (!this.isDying) {
+      this.isDying = true;
+      this.deathTimer = 0;
+      this.fallVelocity = 0;
+    }
+  }
+
+  updateDeathAnimation() {
+    if (!this.isDying) return false;
+
+    this.deathTimer++;
+
+    // Phase 1: Lose energy/amplitude
+    if (this.deathTimer < DEATH_ENERGY_LOSS_PHASE) {
+      this.applyEnergyLoss();
+    }
+
+    // Phase 2: Gravity - fall off screen
+    if (this.deathTimer >= DEATH_ENERGY_LOSS_PHASE) {
+      let gravityAccel = DEATH_GRAVITY_START + (this.deathTimer - DEATH_ENERGY_LOSS_PHASE) * DEATH_GRAVITY_INCREASE;
+      this.fallVelocity += gravityAccel;
+      this.applyGravity();
+    }
+
+    return this.deathTimer === DEATH_ENERGY_LOSS_PHASE; // Return true when gravity starts (for sound trigger)
+  }
+
+  applyEnergyLoss() {
+    // Default implementation for circles
+    if (this.velocity) this.velocity.mult(DEATH_ENERGY_DECAY);
+    this.speed *= DEATH_ENERGY_DECAY;
+  }
+
+  applyGravity() {
+    // Default implementation for circles
+    if (this.position) {
+      this.position.y += this.fallVelocity;
+    }
   }
 
   display(desaturation = 1, brightnessMultiplier = 1) {
@@ -147,23 +203,24 @@ class Circle extends Shape {
 
 class Line extends Shape {
   constructor(amplitude = 20, frequency = 0.05, isHorizontal = true) {
-    // Use position as the axis position (y for horizontal, x for vertical)
-    let pos = isHorizontal ? random(height) : random(width);
-    super(pos, pos); // Create position vector, but we'll override how it's used
-    
+    // Lines don't use the position vector the same way as circles
+    // We pass 0,0 to satisfy the parent constructor but manage position differently
+    super(0, 0);
+
     this.amplitude = amplitude;
     this.frequency = frequency;
     this.timeOffset = random(1000);
     this.isHorizontal = isHorizontal;
-    this.axisPosition = pos; // The position along the axis (y for H, x for V)
+    // The position along the axis (y for horizontal lines, x for vertical lines)
+    this.axisPosition = isHorizontal ? random(height) : random(width);
     this.verticalOffset = 0; // For falling animation
-    this.points = 200;
     this.strokeWeight = 80;
     this.oscillationSpeed = random(0.01, 0.02);
-    
+
     // Autonomous movement
     this.driftSpeed = random(0.3, 0.8);
     this.driftDirection = random(1) > 0.5 ? 1 : -1;
+    this.points = LINE_POINTS;
   }
 
   setSpeed(speed) {
@@ -176,10 +233,10 @@ class Line extends Shape {
 
   update() {
     this.timeOffset += this.oscillationSpeed;
-    
+
     // Autonomous drift
     this.axisPosition += this.driftSpeed * this.driftDirection;
-    
+
     // Wrap position only if not dying
     if (!this.isDying) {
       let maxPos = this.isHorizontal ? height : width;
@@ -189,8 +246,19 @@ class Line extends Shape {
         this.axisPosition = maxPos;
       }
     }
-    
+
     // Don't call super.update() - lines don't use velocity-based movement
+  }
+
+  applyEnergyLoss() {
+    // Lines lose amplitude and oscillation speed
+    this.amplitude *= DEATH_ENERGY_DECAY;
+    this.oscillationSpeed *= DEATH_OSCILLATION_DECAY;
+  }
+
+  applyGravity() {
+    // Lines fall by increasing vertical offset
+    this.verticalOffset += this.fallVelocity;
   }
 
   display(desaturation = 1, brightnessMultiplier = 1) {
@@ -206,12 +274,10 @@ class Line extends Shape {
     strokeWeight(this.strokeWeight);
     noFill();
 
-    let extension = 100;
-
     beginShape();
     if (this.isHorizontal) {
       for (let i = 0; i < this.points; i++) {
-        let x = map(i, 0, this.points - 1, -extension, width + extension);
+        let x = map(i, 0, this.points - 1, -LINE_EXTENSION, width + LINE_EXTENSION);
         let phase = (x / width) * this.frequency * TWO_PI;
         let offset = sin(this.timeOffset + phase) * this.amplitude;
         let y = this.axisPosition + offset + this.verticalOffset;
@@ -219,7 +285,7 @@ class Line extends Shape {
       }
     } else {
       for (let i = 0; i < this.points; i++) {
-        let y = map(i, 0, this.points - 1, -extension, height + extension);
+        let y = map(i, 0, this.points - 1, -LINE_EXTENSION, height + LINE_EXTENSION);
         let phase = (y / height) * this.frequency * TWO_PI;
         let offset = sin(this.timeOffset + phase) * this.amplitude;
         let x = this.axisPosition + offset;
@@ -231,6 +297,8 @@ class Line extends Shape {
     pop();
   }
 
+  // Lines don't need wrapping - they extend beyond the canvas edges
+  // So we override displayWithWrap to just call display
   displayWithWrap(desaturation = 1, brightnessMultiplier = 1) {
     this.display(desaturation, brightnessMultiplier);
   }
