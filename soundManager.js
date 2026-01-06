@@ -7,38 +7,42 @@ class SoundManager {
   }
 
   initialize() {
-    // Initialize synthesizers
+    // Create synthesizers but don't start them yet (browser audio policy)
     this.synths.circle = new p5.Oscillator('sine');
     this.synths.circle.amp(0);
-    this.synths.circle.start();
 
     this.synths.lineH = new p5.Oscillator('triangle');
     this.synths.lineH.amp(0);
-    this.synths.lineH.start();
 
     this.synths.lineV = new p5.Oscillator('triangle');
     this.synths.lineV.amp(0);
-    this.synths.lineV.start();
 
     this.synths.speed = new p5.Oscillator('square');
     this.synths.speed.amp(0);
-    this.synths.speed.start();
 
     this.synths.drop = new p5.Oscillator('sine');
     this.synths.drop.amp(0);
-    this.synths.drop.start();
 
     this.synths.angry = new p5.Oscillator('sawtooth');
     this.synths.angry.amp(0);
-    this.synths.angry.start();
 
     this.isInitialized = true;
   }
 
   ensureAudioContext() {
-    // Resume audio context on first interaction (fixes browser audio policy)
+    // Resume audio context and start oscillators on first interaction (fixes browser audio policy)
     if (getAudioContext().state !== 'running') {
       getAudioContext().resume();
+    }
+
+    // Start all oscillators on first user interaction
+    if (this.isInitialized) {
+      for (let synthName in this.synths) {
+        let synth = this.synths[synthName];
+        if (synth && !synth.started) {
+          synth.start();
+        }
+      }
     }
   }
 
