@@ -43,10 +43,13 @@ Paul Calver - Jan 2026
 
 
 
-## Contact / Links
+## Repo
 
 GitHub Repo – https://github.com/paulcalver/press.any.key.to.play.git<br/><br/>
-Demo URL - https://lab.paulcalver.cc/work/shapes/<br/><br/>
-Website - https://lab.paulcalver.cc/<br/><br/>
-Social - https://instagram.com/calvercalver<br/><br/>
+
+
+## Contact Info
+
+Website - https://lab.paulcalver.cc/<br/>
+Social - https://instagram.com/calvercalver<br/>
 Email - [paulcalver@me.com](mailto:paulcalver@me.com).
