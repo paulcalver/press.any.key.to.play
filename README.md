@@ -33,6 +33,6 @@
 
 ## Contact / Links
 
-*[GitHub repo link](https://github.com/paulcalver/press.any.key.to.play.git)
+[GitHub repo link](https://github.com/paulcalver/press.any.key.to.play.git)
 Demo URL - https://lab.paulcalver.cc/work/shapes/
 Website - https://lab.paulcalver.cc/
