@@ -26,7 +26,7 @@ I drew inspiration from Patatap by Jono Brandel (2014), which demonstrates keyst
 
 ## Screenshots / Media
 
-![PRESS TO PLAY *_* - Overview Screenshot](url)
+![PRESS TO PLAY *_* - Overview Screenshot](media/PRESS_ANY_KEY_TO_PLAY.jpg)
 
 ## Credits / Acknowledgements
 
