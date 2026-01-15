@@ -1,4 +1,4 @@
-# PRESS ANY KEY TO PLAY *_*
+# PRESS ANY KEY TO PLAY \*_\*
 ## Short Description
 *What and why.*
 ## Concept / Intent
