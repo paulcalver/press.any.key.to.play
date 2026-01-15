@@ -1,6 +1,6 @@
 # PRESS ANY KEY TO PLAY \*_\*
 
-## Short Description
+## Description
 
 Press any key to play *_* is an interactive p5.js sketch that transforms typing into a system of compulsive visual feedback. Instead of producing letters, each keystroke generates geometric shapes that accumulate, accelerate and eventually degrade. What begins as joyful interaction quickly becomes intense and overwhelming: a score climbs endlessly, visuals become chaotic and the system decays without constant attention. This project explores gamification's shadow side, examining how reward systems designed to engage can tip into exhaustion, and how the pleasure of interaction can become compulsive and all-consuming.
 
@@ -15,11 +15,12 @@ I drew inspiration from Patatap by Jono Brandel (2014), which demonstrates keyst
 
 
 ## Technology Used
+
 Made using p5.js
 
 ## How to Run / Install
 
-Live demo here - <a href="https://lab.paulcalver.cc/work/shapes/" target="_blank">https://lab.paulcalver.cc/work/shapes/</a>
+Live demo here - https://lab.paulcalver.cc/work/shapes/
 
 
 
@@ -29,12 +30,12 @@ Live demo here - <a href="https://lab.paulcalver.cc/work/shapes/" target="_blank
 
 ## Credits / Acknowledgements
 
-*Paul Calver - Jan 2026*
+Paul Calver - Jan 2026
 
 ## Contact / Links
 
-GitHub Repo – https://github.com/paulcalver/press.any.key.to.play.git
-Demo URL - https://lab.paulcalver.cc/work/shapes/
-Website - https://lab.paulcalver.cc/
-Social - https://instagram.com/calvercalver
-Email - paulcalver@me.com
+GitHub Repo – https://github.com/paulcalver/press.any.key.to.play.git<br/>
+Demo URL - https://lab.paulcalver.cc/work/shapes/<br/>
+Website - https://lab.paulcalver.cc/<br/>
+Social - https://instagram.com/calvercalver<br/>
+Email - [paulcalver@me.com](mailto:paulcalver@me.com).
