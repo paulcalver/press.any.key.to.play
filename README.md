@@ -10,7 +10,7 @@ Press any key to play *_* is an interactive p5.js sketch that transforms typing 
 
 ## How to Run / Install
 
-Live demo here - https://lab.paulcalver.cc/work/shapes/
+Live demo here (desktop only) - https://lab.paulcalver.cc/work/shapes/
 
 
 
